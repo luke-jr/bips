@@ -22,12 +22,21 @@ This BIP is licensed under the BSD 2-clause license.
 ==Specification==
 
 Beginning with block-time N (YYYY-MM-DD at HH:MM:SS UTC), the proof-of-work algorithm used to determine block hashes shall be changed to the SHA3 cryptographic hash function.
+Once the first SHA3 block is mined, future blocks in the same chain must have a block-time greater than or equal to N (and therefore must also use SHA3).
 
 ==Motivation==
 
 FIXME
 
 ==Rationale==
+
+Why is the block-time used directly, rather than the median timestamp?
+
+* The median timestamp only moves forward with the progression of blocks, and as such the current miners could prevent this hardfork from ever activating by simply avoiding ever progressing the median timestamp beyond the activation point. Using the actual block-time allows switching as soon as nodes reach the changeover time.
+
+Why not allow the timestamp of SHA3 blocks to predate the activation time, until median time past moves forward?
+
+* This allows the proof-of-work to be verified independent of the block's context in the chain.
 
 FIXME
 
