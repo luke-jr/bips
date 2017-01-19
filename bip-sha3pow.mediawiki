@@ -42,7 +42,11 @@ FIXME
 
 ==Backwards compatibility==
 
-FIXME
+This proposal is a hardfork, and is not backward compatible.
+When the activation block is reached, old nodes will cease to sync with the network, and will be left vulnerable to SHA2 mining on the last common block.
+As such, activation requires consensus from the entire economy within reason.
+
+Since SHA2 miners may be presumed to be hostile to this proposal, they are to be excluded from any measurement of consensus.
 
 ==Reference implementation==
 
