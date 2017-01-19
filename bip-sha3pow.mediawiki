@@ -1,0 +1,40 @@
+<pre>
+  BIP: ?
+  Layer: Consensus (hard fork)
+  Title: SHA3 proof-of-work
+  Author: Luke Dashjr <luke+bip@dashjr.org>
+  Comments-Summary: No comments yet.
+  Comments-URI: FIXME
+  Status: Draft
+  Type: Standards Track
+  Created: 2017-01-19
+  License: BSD-2-Clause
+</pre>
+
+==Abstract==
+
+The proof-of-work is changed to SHA3 (aka Keccak).
+
+==Copyright==
+
+This BIP is licensed under the BSD 2-clause license.
+
+==Specification==
+
+Beginning with block-time N (YYYY-MM-DD at HH:MM:SS UTC), the proof-of-work algorithm used to determine block hashes shall be changed to the SHA3 cryptographic hash function.
+
+==Motivation==
+
+FIXME
+
+==Rationale==
+
+FIXME
+
+==Backwards compatibility==
+
+FIXME
+
+==Reference implementation==
+
+FIXME
