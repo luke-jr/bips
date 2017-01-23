@@ -21,8 +21,37 @@ This BIP is licensed under the BSD 2-clause license.
 
 ==Specification==
 
-Beginning with block-time N (YYYY-MM-DD at HH:MM:SS UTC), the proof-of-work algorithm used to determine block hashes shall be changed to the SHA3 cryptographic hash function.
-Once the first SHA3 block is mined, future blocks in the same chain must have a block-time greater than or equal to N (and therefore must also use SHA3).
+Nodes must be online from YYYY-MM-DD at 00:00 UTC until the completion of this process (at least 24 hours), to independently validate this proposal.
+It is highly recommended that node operators ensure their system clock is very accurate for this event.
+Node software which cannot reliably and independently determine the outcome should refuse to operate until upgraded to a post-changeover implementation.
+
+The timeline for the day is as follows:
+
+00:00 UTC: nodes begin recording all best-work valid blocks as "candidate final SHA2 blocks".
+Only blocks which were a best-block from this point forward are eligible to be the final SHA2 block.
+
+04:00 UTC: the new miners select their preferred final-SHA2-block from the set of known best-work valid blocks at that time.
+It is critical that miners do not choose a valid block with less work, as nodes with less-perfectly synchronised clocks may reject such a block's candidacy.
+Miners should immediately begin mining on their preferred final-SHA2-block using SHA3.
+
+All nodes, miners included, must reorganise to the first valid SHA3 block received that has as its parent any of the "candidate final SHA2 blocks".
+Should there be multiple first-SHA3 blocks found, nodes should treat the conflict in the same manner they ordinarily do with multiple best-work chains.
+
+08:00 UTC: candidacy for final SHA2 block ends.
+Nodes should not consider blocks received after this time to be valid under any circumstances.
+
+During this process, nodes should track the total sum of work on all SHA3 chains, valid or not.
+
+When the first SHA3 block no less than 120 blocks deep (20 hours) is the parent of at least 95% of all the known blocks with at least as much work, the candidate final SHA2 block upon which it is built is determined to be the official "final SHA2 block", and under no circumstances shall that final SHA2 block ever be reorganised off of.
+
+Once this final SHA2 block is determined, implementations must include its block hash to ensure nodes never accept any other alternative SHA2 history.
+Software may, at its authors' option, choose to instead include the complete UTXO set as of this final block, and treat the first SHA3 block as a new "genesis block".
+
+===SHA3 mining difficulty===
+
+The difficulty of the first 12 SHA3 blocks is to be exactly <TODO>.
+
+For the subsequent 1008 SHA3 blocks and through the end of the current difficulty adjustment period, the network difficulty of each block shall be determined based on the past SHA3 blocks so far.
 
 ==Motivation==
 
@@ -30,15 +59,9 @@ FIXME
 
 ==Rationale==
 
-Why is the block-time used directly, rather than the median timestamp?
+Why not use the median time past, or block time?
 
-* The median timestamp only moves forward with the progression of blocks, and as such the current miners could prevent this hardfork from ever activating by simply avoiding ever progressing the median timestamp beyond the activation point. Using the actual block-time allows switching as soon as nodes reach the changeover time.
-
-Why not allow the timestamp of SHA3 blocks to predate the activation time, until median time past moves forward?
-
-* This allows the proof-of-work to be verified independent of the block's context in the chain.
-
-FIXME
+* These timestamps are subject to the blockchain itself. The proof-of-work algorithm determines the valuation of which chain is best, and as such cannot be subject to the blockchain.
 
 ==Backwards compatibility==
 
