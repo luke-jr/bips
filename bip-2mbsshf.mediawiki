@@ -21,11 +21,18 @@ This BIP is licensed under the BSD 2-clause license.
 
 ==Specification==
 
+===Block size limit===
+
 Upon activation, a block size limit of 2000000 bytes is enforced.
+
+===Block weight limit===
+
 The block weight limit remains at 4000000 WU.
 
 The calculation of block weight is modified:
 all witness data, including both scriptSig (used by pre-segwit inputs) and segwit witness data, is measured as 1 weight-unit (WU), while all other data in the block is measured as 4 WU.
+
+===Transaction merkle trees===
 
 The transaction-id merkle root hash in the block header is replaced with a new merkle tree built on leaves that consist of a hash of:
 
@@ -38,6 +45,8 @@ The witness commitment in the generation transaction is replaced with a new merk
 2. A hash of the entire transaction.
 
 Except that for the generation transaction, the witness reserved value is the entire leaf.
+
+===Transaction size limit===
 
 The maximum size of a transaction stripped of witness data is limited to 1 MB.
 
