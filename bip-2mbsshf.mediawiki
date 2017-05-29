@@ -27,11 +27,17 @@ The block weight limit remains at 4000000 WU.
 The calculation of block weight is modified:
 all witness data, including both scriptSig (used by pre-segwit inputs) and segwit witness data, is measured as 1 weight-unit (WU), while all other data in the block is measured as 4 WU.
 
-The witness commitment in the generation transaction is no longer required, and instead the txid merkle root in the block header is replaced with a hash of:
+The transaction-id merkle root hash in the block header is replaced with a new merkle tree built on leaves that consist of a hash of:
+
+1. A hash of the entire transaction.
+2. The transaction id.
+
+The witness commitment in the generation transaction is replaced with a new merkle tree built on leaves that consist of a hash of:
 
 1. The witness reserved value.
-2. The witness merkle root hash.
-3. The transaction ID merkle root hash.
+2. A hash of the entire transaction.
+
+Except that for the generation transaction, the witness reserved value is the entire leaf.
 
 The maximum size of a transaction stripped of witness data is limited to 1 MB.
 
