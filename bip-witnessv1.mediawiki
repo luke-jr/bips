@@ -27,7 +27,7 @@ When the witness version (hereafter called the witness *major* version) is 1 and
 
 * This is defined to be a "Witness version 1.x" program.
 * The final witness element, when hashed with SHA256d, must match the witness program.
-* The final witness element must begin with a valid [https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer varint], to be interpreted as a witness *minor* version. Any extra data after the varint must be ignored.
+* The final witness element must begin with a valid [https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer varint], and is interpreted as a witness *minor* version. Any extra data after the varint must be ignored.
 * The rest of the witness elements are to be ignored.
 * No additional size checks should be performed at this point.
 
@@ -43,7 +43,7 @@ When the witness version 1.x program contains a witness minor version of 0:
 
 ====Modified Script====
 
-Witness version 1.0 scripts are interpreted the same as older Bitcoin Scripts, except:
+Witness version 1.0 scripts are interpreted the same as older witness v0 Scripts, except:
 
 * Undefined opcodes, including the "disabled" and "reserved" opcodes (full list: 0x50, 0x7e-0x81, 0x83-0x86, 0x89, 0x8a, 0x8d, 0x8e, 0x95-0x99, 0xba-0xff), immediately terminate the script with success (the stack is set to a single element with the standard TRUE value). Note that the OP_NOP opcodes (0xb0, 0xb3-0xb9) are NOT redefined in this manner.
 
