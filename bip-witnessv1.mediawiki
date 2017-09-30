@@ -1,0 +1,78 @@
+<pre>
+  BIP: TODO
+  Layer: Consensus (soft fork)
+  Title: Version 1 witness programs
+  Author: Luke Dashjr <luke+bip@dashjr.org>
+  Comments-Summary: No comments yet.
+  Comments-URI: https://github.com/bitcoin/bips/wiki/Comments:BIP-TODO
+  Status: Draft
+  Type: Standards Track
+  Created: 2017-09-30
+  License: BSD-2-Clause
+</pre>
+
+==Abstract==
+
+This BIP describes a new witness program version, further enhancing softfork capabilities.
+
+==Copyright==
+
+This BIP is licensed under the BSD 2-clause license.
+
+==Specification==
+
+===Witness minor version===
+
+When the witness version (hereafter called the witness *major* version) is 1 and the length of the witness program is exactly 32 bytes:
+
+* This is defined to be a "Witness version 1.x" program.
+* The final witness element, when hashed with SHA256d, must match the witness program.
+* The final witness element must begin with a valid [https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer varint], to be interpreted as a witness *minor* version. Any extra data after the varint must be ignored.
+* The rest of the witness elements are to be ignored.
+* No additional size checks should be performed at this point.
+
+===Witness version 1.0===
+
+When the witness version 1.x program contains a witness minor version of 0:
+
+* This is defined to be a "Witness version 1.0" program.
+* The portion of the final witness element following the minor version is to be interpreted as a serialized Script (<code>witnessScript</code>).
+* The <code>witnessScript</code> (≤ 10,000 bytes) is popped off the initial witness stack.
+* The <code>witnessScript</code> is executed as [[#Modified_Script|Modified Script]] with the remaining witness stack (≤ 520 bytes for each stack item).
+* The script must not fail, and result in exactly a single TRUE on the stack.
+
+====Modified Script====
+
+Witness version 1.0 scripts are interpreted the same as older Bitcoin Scripts, except:
+
+* Undefined opcodes, including the "disabled" and "reserved" opcodes (full list: 0x50, 0x7e-0x81, 0x83-0x86, 0x89, 0x8a, 0x8d, 0x8e, 0x95-0x99, 0xba-0xff), immediately terminate the script with success (the stack is set to a single element with the standard TRUE value). Note that the OP_NOP opcodes (0xb0, 0xb3-0xb9) are NOT redefined in this manner.
+
+===Deployment===
+
+TBD
+
+==Motivation and Rationale==
+
+===For script minor versioning===
+
+* The witness major version only allows for 17 different versions. The witness minor version potentially expands each one of these to cover many different variations.
+* Putting the witness minor version under the witness program hash keeps the version private until spending.
+* Putting the witness minor version under the witness program hash enables receiving with new witness versions before they activate, provided care is taken to guarantee the preimage is not disclosed prematurely.
+
+===For new behaviour of undefined opcodes===
+
+Previously, OP_NOP opcodes were used by having softforks turn them into new OP_*VERIFY opcodes.
+This is possible because the behaviour was either to reject the script as invalid, or behave as the same NOP.
+However, new opcodes introduced this way cannot remove or add elements to the stack, and as a result are limited in functionality.
+
+By providing opcodes that immediately cause the script to exit with success, new opcodes introduced are enabled to influence the execution of the rest of the script in any manner desired.
+
+==Backwards Compatibility==
+
+Only witness major version 0 has been defined thus far.
+This BIP intentionally only defines witness minor versions for witness major version 1.
+By doing so, it does not effect the current witness scripts at all, and leaves open the possibility of future improvements in later witness major versions.
+
+==Reference Implementation==
+
+https://github.com/bitcoin/bitcoin/compare/master...luke-jr:witnessv1
