@@ -48,6 +48,30 @@ Witness version 1.0 scripts are interpreted the same as older witness v0 Scripts
 
 * Undefined opcodes, including the "disabled" and "reserved" opcodes (full list: 0x50, 0x7e-0x81, 0x83-0x86, 0x89, 0x8a, 0x8d, 0x8e, 0x95-0x99, 0xba-0xff), immediately terminate the script with success (the stack is set to a single element with the standard TRUE value). Note that the OP_NOP opcodes (0xb0, 0xb3-0xb9) are NOT redefined in this manner.
 
+====Modified signature format====
+
+Witness version 1.0 scripts use a new signature format instead of DER.
+
+The signature itself consists of:
+
+* 32 bytes of R
+* 32 bytes of S
+* varint sighash flags (typically 1 byte)
+* Optional:
+** varint EvalScript flags
+** varint sigversion constant (FIXME: define; it's 2 here!)
+** length of serialized condition Script
+** serialized condition Script
+
+FIXME: flags and sigversion seem to have overlapping use cases in this context, and it would be bad if signatures could escape the blockchain context (eg, rely on unactivated softfork logic) or invoke node-specific policy restrictions; NOTE we cannot simply inherit flags/sigversion, or else we risk signatures being moved to different contexts as an exploit
+
+The hash of data signed removes the explicit int sighash, and replaces it with the raw data of everything following S (including both the sighash flags and serialized Script when provided).
+
+If the condition-Script is provided with the signature, it is executed with a copy of the current stack.
+The alt-stack is NOT copied, and changes made to the stack do not propagate upward to the main script.
+If the condition script's execution fails, or returns a non-true value on the top stack item, then the CHECKSIG opcode fails.
+(Sigops executed are NOT counted toward the block's sigop limits.)
+
 ===Deployment===
 
 TBD
