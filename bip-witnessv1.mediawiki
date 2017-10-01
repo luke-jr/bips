@@ -40,7 +40,7 @@ When the witness version 1.x program contains a witness minor version of 0:
 * The <code>witnessScript</code> (≤ 10,000 bytes) is popped off the initial witness stack.
 * The <code>witnessScript</code> is executed as [[#Modified_Script|Modified Script]] with the remaining witness stack (≤ 520 bytes for each stack item).
 * If the stack is not empty, and the top stack element is not exactly either the constant TRUE or FALSE, the top stack element is popped, and executed as a serialized script. (Sigops executed are NOT counted toward the block's sigop limits.)
-* The script(s) must not fail, and result in exactly a single TRUE on the stack.
+* The script(s) must not fail, and the top stack item must boolean-cast to TRUE. (The CLEANSTACK rule is not consensus-enforced.)
 
 ====Modified Script====
 
