@@ -72,6 +72,10 @@ The alt-stack is NOT copied, and changes made to the stack do not propagate upwa
 If the condition script's execution fails, or returns a non-true value on the top stack item, then the CHECKSIG opcode fails.
 (Sigops executed are NOT counted toward the block's sigop limits.)
 
+====New sighash flag: SIGHASH_WITNESS_DEPTH====
+
+If 0x40 (SIGHASH_WITNESS_DEPTH) is set in the SIGHASH flags, the signature hash includes the number of witness elements for this input, following the amount.
+
 ===Deployment===
 
 TBD
