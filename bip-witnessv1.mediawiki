@@ -23,13 +23,20 @@ This BIP is licensed under the BSD 2-clause license.
 
 ===Witness minor version===
 
-When the witness version (hereafter called the witness *major* version) is 1 and the length of the witness program is exactly 32 bytes:
+When the witness version (hereafter called the witness *major* version) is 1 and the length of the witness program is exactly 20 or 32 bytes:
 
 * This is defined to be a "Witness version 1.x" program.
-* The final witness element, when hashed with SHA256d, must match the witness program.
+* The final witness element, when hashed with the hash algorithm, must match the witness program.
 * The final witness element must begin with a valid [https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer varint], and is interpreted as a witness *minor* version. Any extra data after the varint must be ignored.
 * The rest of the witness elements are to be ignored.
 * No additional size checks should be performed at this point.
+
+The hash algortihm is chosen based on the witness program size:
+
+* If it is 20 bytes, RIPEMD160(SHA256(final witness element)) is used.
+* If it is 32 bytes, SHA256(SHA256(final witness element)) is used.
+
+Note that any witness program size other than 20 or 32 is ignored, and remains unconditionally valid.
 
 ===Witness version 1.0===
 
