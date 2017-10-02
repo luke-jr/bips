@@ -54,6 +54,8 @@ When the witness version 1.x program contains a witness minor version of 0:
 Witness version 1.0 scripts are interpreted the same as older witness v0 Scripts, except:
 
 * Undefined opcodes, including the "disabled" and "reserved" opcodes (full list: 0x50, 0x7e-0x81, 0x83-0x86, 0x89, 0x8a, 0x8d, 0x8e, 0x95-0x99, 0xba-0xff), immediately terminate the script with success (the stack is set to a single element with the standard TRUE value). Note that the OP_NOP opcodes (0xb0, 0xb3-0xb9) are NOT redefined in this manner.
+* There is no limit specifically for the size of constant stack pushes (MAX_SCRIPT_ELEMENT_SIZE). (This also applies when loading the initial stack from the witness.)
+* There is no limit specifically for the number of non-push opcodes executed by the Script.
 
 ====Modified signature format====
 
