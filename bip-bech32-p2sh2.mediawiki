@@ -33,7 +33,7 @@ However, they can be made relatively expensive, by forbidding literal storage of
 
 There are three kinds of literal data needed for on-chain transactions: hashes, public keys, and signatures.
 Only signatures can not be prevented from including literal data entirely, but by requiring them to be verified, the cost to abuse them is significantly higher.
-This BIP addresses a pre-requisitite for proving hashes: by encoding the pre-image of the final on-chain hash in the address, we can hypothetically relay that pre-image to prove the on-chain data is in fact a true hash.
+This BIP addresses a pre-requisite for proving hashes: by encoding the pre-image of the final on-chain hash in the address, we can hypothetically relay that pre-image to prove the on-chain data is in fact a true hash.
 
 No effort is made herein to actually specify or implement the transaction relay policy.
 
