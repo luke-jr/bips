@@ -1,41 +1,41 @@
-# BOLT #9: Assigned Feature Flags
+==BOLT #9: Assigned Feature Flags==
 
-This document tracks the assignment of `localfeatures` and `globalfeatures` flags in the `init` message ([BOLT #1](bip-0201.mediawiki)), as well as the `features` field in the `channel_announcement` message and `node_announcement` message ([BOLT #7](bip-0207.mediawiki)).
+This document tracks the assignment of <code>localfeatures</code> and <code>globalfeatures</code> flags in the <code>init</code> message ([[bip-0201.mediawiki|BOLT #1]]), as well as the <code>features</code> field in the <code>channel_announcement</code> message and <code>node_announcement</code> message [[bip-0207.mediawiki|BOLT #7]])).
 They are tracked separately since new flags will likely be added over time.
 
-The `features` flags in the routing messages are a subset of the `globalfeatures` flags, since the `localfeatures` are by definition only of interest to direct peers.
+The <code>features</code> flags in the routing messages are a subset of the <code>globalfeatures</code> flags, since the <code>localfeatures</code> are by definition only of interest to direct peers.
 
 Flags are numbered from the least-significant bit, at bit 0 (i.e. 0x1,
 an even bit). They are generally assigned in pairs so that features
 can be introduced as optional (odd bits) and later upgraded to be compulsory, refusing
-old nodes (even bits). See [BOLT #1: The `init` Message](bip-0201.mediawiki#the-init-message).
+old nodes (even bits). See [[bip-0201.mediawiki#the-init-message|BOLT #1: The <code>init</code> Message]].
 
-## Assigned `localfeatures` flags
+===Assigned <code>localfeatures</code> flags===
 
-These flags may only be used in the `init` message:
+These flags may only be used in the <code>init</code> message:
 
 | Bits | Name             |Description                                     | Link                                                                |
 |------|------------------|------------------------------------------------|---------------------------------------------------------------------|
-| 0/1  | `option-data-loss-protect` | Requires or supports extra `channel_reestablish` fields | [BOLT #2](bip-0202.mediawiki#message-retransmission) |
-| 3  | `initial_routing_sync` | Indicates that the sending node needs a complete routing information dump | [BOLT #7](bip-0207.mediawiki#initial-sync) |
-| 4/5  | `option_upfront_shutdown_script` | Commits to a shutdown scriptpubkey when opening | [BOLT #2](bip-0202.mediawiki#the-open_channel-message) |
+| 0/1  | <code>option-data-loss-protect</code> | Requires or supports extra <code>channel_reestablish</code> fields | [[bip-0202.mediawiki#message-retransmission|BOLT #2]] |
+| 3  | <code>initial_routing_sync</code> | Indicates that the sending node needs a complete routing information dump | [[bip-0207.mediawiki#initial-sync|BOLT #7]] |
+| 4/5  | <code>option_upfront_shutdown_script</code> | Commits to a shutdown scriptpubkey when opening | [[bip-0202.mediawiki#the-open_channel-message|BOLT #2]] |
 
-## Assigned `globalfeatures` flags
+===Assigned <code>globalfeatures</code> flags===
 
-There are currently no `globalfeatures` flags.
+There are currently no <code>globalfeatures</code> flags.
 
-## Requirements
+===Requirements===
 
 The requirements for receiving specific bits are defined in the linked sections in the table above.
 The requirements for feature bits that are not defined
-above can be found in [BOLT #1: The `init` Message](bip-0201.mediawiki#the-init-message). 
+above can be found in [[bip-0201.mediawiki#the-init-message|BOLT #1: The <code>init</code> Message]]. 
 
-## Rationale
+===Rationale===
 
-There's little point in insisting on an `initial_routing_sync`. You can't
+There's little point in insisting on an <code>initial_routing_sync</code>. You can't
 tell if the remote node complies, and it has to know what the flag means as
 it's defined in the initial spec. So, there's no even bit for this.
 
-![Creative Commons License](https://i.creativecommons.org/l/by/4.0/88x31.png "License CC-BY")
+[[https://i.creativecommons.org/l/by/4.0/88x31.png "License CC-BY"|alt=Creative Commons License]]
 <br>
-This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
+This work is licensed under a [http://creativecommons.org/licenses/by/4.0/ Creative Commons Attribution 4.0 International License].

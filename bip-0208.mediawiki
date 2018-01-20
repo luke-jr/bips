@@ -1,37 +1,39 @@
-# BOLT #8: Encrypted and Authenticated Transport
+==BOLT #8: Encrypted and Authenticated Transport==
 
 All communications between Lightning nodes is encrypted in order to
 provide confidentiality for all transcripts between nodes and is authenticated in order to
 avoid malicious interference. Each node has a known long-term identifier that
-is a public key on Bitcoin's `secp256k1` curve. This long-term public key is
+is a public key on Bitcoin's <code>secp256k1</code> curve. This long-term public key is
 used within the protocol to establish an encrypted and authenticated connection
 with peers, and also to authenticate any information advertised on behalf
 of a node.
 
-# Table of Contents
+==Table of Contents==
 
-  * [Cryptographic Messaging Overview](#cryptographic-messaging-overview)
-    * [Authenticated Key Agreement Handshake](#authenticated-key-agreement-handshake)
-    * [Handshake Versioning](#handshake-versioning)
-    * [Noise Protocol Instantiation](#noise-protocol-instantiation)
-  * [Authenticated Key Exchange Handshake Specification](#authenticated-key-exchange-handshake-specification)
-    * [Handshake State](#handshake-state)
-    * [Handshake State Initialization](#handshake-state-initialization)
-    * [Handshake Exchange](#handshake-exchange)
-  * [Lightning Message Specification](#lightning-message-specification)
-    * [Encrypting Messages](#encrypting-messages)
-    * [Decrypting Messages](#decrypting-messages)
-  * [Lightning Message Key Rotation](#lightning-message-key-rotation)
-  * [Security Considerations](#security-considerations)
-  * [Appendix A: Transport Test Vectors](#appendix-a-transport-test-vectors)
-    * [Initiator Tests](#initiator-tests)
-    * [Responder Tests](#responder-tests)
-    * [Message Encryption Tests](#message-encryption-tests)
-  * [Acknowledgments](#acknowledgments)
-  * [References](#references)
-  * [Authors](#authors)
+<pre>
+* [[#cryptographic-messaging-overview|Cryptographic Messaging Overview]]
+  * [[#authenticated-key-agreement-handshake|Authenticated Key Agreement Handshake]]
+  * [[#handshake-versioning|Handshake Versioning]]
+  * [[#noise-protocol-instantiation|Noise Protocol Instantiation]]
+* [[#authenticated-key-exchange-handshake-specification|Authenticated Key Exchange Handshake Specification]]
+  * [[#handshake-state|Handshake State]]
+  * [[#handshake-state-initialization|Handshake State Initialization]]
+  * [[#handshake-exchange|Handshake Exchange]]
+* [[#lightning-message-specification|Lightning Message Specification]]
+  * [[#encrypting-messages|Encrypting Messages]]
+  * [[#decrypting-messages|Decrypting Messages]]
+* [[#lightning-message-key-rotation|Lightning Message Key Rotation]]
+* [[#security-considerations|Security Considerations]]
+* [[#appendix-a-transport-test-vectors|Appendix A: Transport Test Vectors]]
+  * [[#initiator-tests|Initiator Tests]]
+  * [[#responder-tests|Responder Tests]]
+  * [[#message-encryption-tests|Message Encryption Tests]]
+* [[#acknowledgments|Acknowledgments]]
+* [[#references|References]]
+* [[#authors|Authors]]
+</pre>
 
-## Cryptographic Messaging Overview
+===Cryptographic Messaging Overview===
 
 Prior to sending any Lightning messages, nodes must first initiate the
 cryptographic session state that is used to encrypt and authenticate all
@@ -43,31 +45,32 @@ The transcript between two nodes is separated into two distinct segments:
 
 1. First, before any actual data transfer, both nodes participate in an
    authenticated key agreement handshake, which is based off of the Noise
-   Protocol Framework<sup>[2](#reference-2)</sup>.
+   Protocol Framework<sup>[[#reference-2|2]]</sup>.
 2. If the initial handshake is successful, then nodes enter the Lightning
    message exchange phase. In the Lightning message exchange phase, all
    messages are Authenticated Encryption with Associated Data (AEAD) ciphertexts.
 
-### Authenticated Key Agreement Handshake
+====Authenticated Key Agreement Handshake====
 
-The handshake chosen for the authenticated key exchange is `Noise_XK`. As a
+The handshake chosen for the authenticated key exchange is <code>Noise_XK</code>. As a
 pre-message, the initiator must know the identity public key of
 the responder. This provides a degree of identity hiding for the
 responder, as its public key is _never_ transmitted during the handshake. Instead,
 authentication is achieved implicitly via a series of Elliptic-Curve
 Diffie-Hellman (ECDH) operations followed by a MAC check.
 
-The authenticated key agreement (`Noise_XK`) is performed in three distinct
+The authenticated key agreement (<code>Noise_XK</code>) is performed in three distinct
 steps. During each "act" of the handshake the following occurs: some (possibly encrypted) keying
 material is sent to the other party; an ECDH is performed based on exactly
 which act is being executed, with the result mixed into the current set of
-encryption keys (`ck` the chaining key and `k` the encryption key); and 
+encryption keys (<code>ck</code> the chaining key and <code>k</code> the encryption key); and 
 an AEAD payload with a zero-length cipher text is sent. As this payload has no length, only a MAC is sent across. The mixing of ECDH outputs into
 a hash digest forms an incremental TripleDH handshake.
 
-Using the language of the Noise Protocol, `e` and `s` (both public keys)
-indicate possibly encrypted keying material, and `es`, `ee`, and `se` each indicate an
+Using the language of the Noise Protocol, <code>e</code> and <code>s</code> (both public keys)
+indicate possibly encrypted keying material, and <code>es</code>, <code>ee</code>, and <code>se</code> each indicate an
 ECDH operation between two keys. The handshake is laid out as follows:
+<pre>
 ```
     Noise_XK(s, rs):
        <- s
@@ -75,10 +78,11 @@ ECDH operation between two keys. The handshake is laid out as follows:
        -> e, es
        <- e, ee
        -> s, se
+</pre>
 ```
 All of the handshake data sent across the wire, including the keying material, is
-incrementally hashed into a session-wide "handshake digest", `h`. Note that the
-handshake state `h`, is never transmitted during the handshake; instead, digest
+incrementally hashed into a session-wide "handshake digest", <code>h</code>. Note that the
+handshake state <code>h</code>, is never transmitted during the handshake; instead, digest
 is used as the Associated Data within the zero-length AEAD messages.
 
 Authenticating each message sent ensures that a man-in-the-middle (MITM) hasn't modified
@@ -90,7 +94,7 @@ authentication has been successful up to that point. If a MAC check ever fails
 during the handshake process, then the connection is to be immediately
 terminated.
 
-### Handshake Versioning
+====Handshake Versioning====
 
 Each message sent during the initial handshake starts with a single leading
 byte, which indicates the version used for the current handshake. A version of 0
@@ -99,99 +103,103 @@ client has deviated from the protocol originally specified within this
 document. Clients MUST reject handshake attempts initiated with an unknown
 version.
 
-### Noise Protocol Instantiation
+====Noise Protocol Instantiation====
 
 Concrete instantiations of the Noise Protocol require the definition of
 three abstract cryptographic objects: the hash function, the elliptic curve,
-and the AEAD cipher scheme. For Lightning, `SHA-256` is
-chosen as the hash function, `secp256k1` as the elliptic curve, and
-`ChaChaPoly-1305` as the AEAD construction. The composition of `ChaCha20`
-and `Poly1305` that are used MUST conform to `RFC 7539`<sup>[1](#reference-1)</sup>. 
+and the AEAD cipher scheme. For Lightning, <code>SHA-256</code> is
+chosen as the hash function, <code>secp256k1</code> as the elliptic curve, and
+<code>ChaChaPoly-1305</code> as the AEAD construction. The composition of <code>ChaCha20</code>
+and <code>Poly1305</code> that are used MUST conform to <code>RFC 7539</code><sup>[[#reference-1|1]]</sup>. 
 
 The official protocol name for the Lightning variant of Noise is
-`Noise_XK_secp256k1_ChaChaPoly_SHA256`. The ASCII string representation of
+<code>Noise_XK_secp256k1_ChaChaPoly_SHA256</code>. The ASCII string representation of
 this value is hashed into a digest used to initialize the starting handshake
 state. If the protocol names of two endpoints differ, then the handshake
 process fails immediately.
 
-## Authenticated Key Exchange Handshake Specification
+===Authenticated Key Exchange Handshake Specification===
 
 The handshake proceeds in three acts, taking 1.5 round trips. Each handshake is
 a _fixed_ sized payload without any header or additional meta-data attached.
 The exact size of each Act is as follows:
 
-   * **Act One**: 50 bytes
-   * **Act Two**: 50 bytes
-   * **Act Three**: 66 bytes
+<pre>
+* ''''Act One'''': 50 bytes
+* ''''Act Two'''': 50 bytes
+* ''''Act Three'''': 66 bytes
+</pre>
 
-### Handshake State
+====Handshake State====
 
 Throughout the handshake process, each side maintains these variables:
 
- * `ck`: The **chaining key**. This value is the accumulated hash of all
-   previous ECDH outputs. At the end of the handshake, `ck` is used to derive
+ * <code>ck</code>: The ''''chaining key''''. This value is the accumulated hash of all
+   previous ECDH outputs. At the end of the handshake, <code>ck</code> is used to derive
    the encryption keys for Lightning messages.
 
- * `h`: The **handshake hash**. This value is the accumulated hash of _all_
+ * <code>h</code>: The ''''handshake hash''''. This value is the accumulated hash of _all_
    handshake data that has been sent and received so far during the handshake
    process.
 
- * `temp_k1`, `temp_k2`, `temp_k3`: **intermediate keys**. These are used to encrypt and decrypt the
+ * <code>temp_k1</code>, <code>temp_k2</code>, <code>temp_k3</code>: ''''intermediate keys''''. These are used to encrypt and decrypt the
    zero-length AEAD payloads at the end of each handshake message.
 
- * `e`: A party's **ephemeral keypair**. For each session a node MUST generate a
+ * <code>e</code>: A party's ''''ephemeral keypair''''. For each session a node MUST generate a
    new ephemeral key with strong cryptographic randomness.
 
- * `s`: a party's **static public key** (`ls` for local, `rs` for remote)
+ * <code>s</code>: a party's ''''static public key'''' (<code>ls</code> for local, <code>rs</code> for remote)
 
 The following functions will also be referenced:
 
-  * `ECDH(rk, k)`: performs an Elliptic-Curve Diffie-Hellman operation using
-    `rk`, which is a `secp256k1` public key, and `k`, which is a valid private key
-    within the finite field as defined by the curve parameters
-      * The returned value is the SHA256 of the DER-compressed format of the
-	    generated point.
+<pre>
+* <code>ECDH(rk, k)</code>: performs an Elliptic-Curve Diffie-Hellman operation using
+  <code>rk</code>, which is a <code>secp256k1</code> public key, and <code>k</code>, which is a valid private key
+  within the finite field as defined by the curve parameters
+    * The returned value is the SHA256 of the DER-compressed format of the
+   generated point.
 
-  * `HKDF(salt,ikm)`: a function defined in [3](#reference-3), evaluated with a
-    zero-length `info` field
-     * All invocations of `HKDF` implicitly return 64 bytes of
-       cryptographic randomness using the extract-and-expand component of the
-       `HKDF`.
+* <code>HKDF(salt,ikm)</code>: a function defined in [[#reference-3|3]], evaluated with a
+  zero-length <code>info</code> field
+   * All invocations of <code>HKDF</code> implicitly return 64 bytes of
+     cryptographic randomness using the extract-and-expand component of the
+     <code>HKDF</code>.
 
-  * `encryptWithAD(k, n, ad, plaintext)`: outputs `encrypt(k, n, ad, plaintext)`
-     * where `encrypt` is an evaluation of `ChaCha20-Poly1305` (IETF variant) with the passed
-       arguments, with nonce `n` encoded as 32 zero bits, followed by a *little-endian* 64-bit value (this
-	   follows the Noise Protocol convention, rather than our normal endian).
+* <code>encryptWithAD(k, n, ad, plaintext)</code>: outputs <code>encrypt(k, n, ad, plaintext)</code>
+   * where <code>encrypt</code> is an evaluation of <code>ChaCha20-Poly1305</code> (IETF variant) with the passed
+     arguments, with nonce <code>n</code> encoded as 32 zero bits, followed by a ''little-endian'' 64-bit value (this
+  follows the Noise Protocol convention, rather than our normal endian).
 
-  * `decryptWithAD(k, n, ad, ciphertext)`: outputs `decrypt(k, n, ad, ciphertext)`
-     * where `decrypt` is an evaluation of `ChaCha20-Poly1305` (IETF variant) with the passed
-       arguments, with nonce `n` encoded as 32 zero bits, followed by a *little-endian* 64-bit value.
+* <code>decryptWithAD(k, n, ad, ciphertext)</code>: outputs <code>decrypt(k, n, ad, ciphertext)</code>
+   * where <code>decrypt</code> is an evaluation of <code>ChaCha20-Poly1305</code> (IETF variant) with the passed
+     arguments, with nonce <code>n</code> encoded as 32 zero bits, followed by a ''little-endian'' 64-bit value.
 
-  * `generateKey()`: generates and returns a fresh `secp256k1` keypair
-     * where the object returned by `generateKey` has two attributes: 
-         * `.pub`, which returns an abstract object representing the public key
-         * `.priv`, which represents the private key used to generate the
-           public key
-     * where the object also has a single method: 
-         * `.serializeCompressed()`
+* <code>generateKey()</code>: generates and returns a fresh <code>secp256k1</code> keypair
+   * where the object returned by <code>generateKey</code> has two attributes: 
+       * <code>.pub</code>, which returns an abstract object representing the public key
+       * <code>.priv</code>, which represents the private key used to generate the
+         public key
+   * where the object also has a single method: 
+       * <code>.serializeCompressed()</code>
 
-  * `a || b` denotes the concatenation of two byte strings `a` and `b`
+* <code>a || b</code> denotes the concatenation of two byte strings <code>a</code> and <code>b</code>
+</pre>
 
 
-### Handshake State Initialization
+====Handshake State Initialization====
 
 Before the start of the first act, both sides initialize their per-sessions
 state as follows:
 
- 1. `h = SHA-256(protocolName)`
-    * where `protocolName = "Noise_XK_secp256k1_ChaChaPoly_SHA256"` encoded as
+ 1. <code>h = SHA-256(protocolName)</code>
+    * where <code>protocolName = "Noise_XK_secp256k1_ChaChaPoly_SHA256"</code> encoded as
       an ASCII string.
 
- 2. `ck = h`
+ 2. <code>ck = h</code>
 
 
- 3. `h = SHA-256(h || prologue)`
-    * where `prologue` is the ASCII string: `lightning`.
+ 3. <code>h = SHA-256(h || prologue)</code>
+    * where <code>prologue</code> is the ASCII string: <code>lightning</code>.
 
 
 As a concluding step, both sides mix the responder's public key into the
@@ -199,20 +207,22 @@ handshake digest:
 
  * The initiating node mixes in the responding node's static public key
    serialized in Bitcoin's DER-compressed format:
-   * `h = SHA-256(h || rs.pub.serializeCompressed())`
+   * <code>h = SHA-256(h || rs.pub.serializeCompressed())</code>
 
  * The responding node mixes in their local static public key serialized in
    Bitcoin's DER-compressed format:
-   * `h = SHA-256(h || ls.pub.serializeCompressed())`
+   * <code>h = SHA-256(h || ls.pub.serializeCompressed())</code>
 
 
-### Handshake Exchange
+====Handshake Exchange====
 
-#### Act One
+=====Act One=====
 
 
+<pre>
 ```
     -> e, es
+</pre>
 ```
 
 Act One is sent from initiator to responder. During Act One, the initiator
@@ -221,59 +231,65 @@ challenge, the initiator _must_ know the static public key of the responder.
 
 The handshake message is _exactly_ 50 bytes: 1 byte for the handshake
 version, 33 bytes for the compressed ephemeral public key of the initiator,
-and 16 bytes for the `poly1305` tag.
+and 16 bytes for the <code>poly1305</code> tag.
 
-**Sender Actions:**
+*''Sender Actions:''''
 
-  * `e = generateKey()`
-  * `h = SHA-256(h || e.pub.serializeCompressed())`
-     * The newly generated ephemeral key is accumulated into the running
-       handshake digest.
-  * `ss = ECDH(rs, e.priv)`
-     * The initiator performs an ECDH between its newly generated ephemeral
-       key and the remote node's static public key.
-  * `ck, temp_k1 = HKDF(ck, ss)`
-     * A new temporary encryption key is generated, which is
-       used to generate the authenticating MAC.
-  * `c = encryptWithAD(temp_k1, 0, h, zero)`
-     * where `zero` is a zero-length plaintext
-  * `h = SHA-256(h || c)`
-     * Finally, the generated ciphertext is accumulated into the authenticating
-       handshake digest.
-  * Send `m = 0 || e.pub.serializeCompressed() || c` to the responder over the network buffer.
+<pre>
+* <code>e = generateKey()</code>
+* <code>h = SHA-256(h || e.pub.serializeCompressed())</code>
+   * The newly generated ephemeral key is accumulated into the running
+     handshake digest.
+* <code>ss = ECDH(rs, e.priv)</code>
+   * The initiator performs an ECDH between its newly generated ephemeral
+     key and the remote node's static public key.
+* <code>ck, temp_k1 = HKDF(ck, ss)</code>
+   * A new temporary encryption key is generated, which is
+     used to generate the authenticating MAC.
+* <code>c = encryptWithAD(temp_k1, 0, h, zero)</code>
+   * where <code>zero</code> is a zero-length plaintext
+* <code>h = SHA-256(h || c)</code>
+   * Finally, the generated ciphertext is accumulated into the authenticating
+     handshake digest.
+* Send <code>m = 0 || e.pub.serializeCompressed() || c</code> to the responder over the network buffer.
+</pre>
 
-**Receiver Actions:**
+*''Receiver Actions:''''
 
-  * Read _exactly_ 50 bytes from the network buffer.
-  * Parse out the read message (`m`) into `v = m[0]`, `re = m[1:33]`, and `c = m[34:]`.
-    * where `m[0]` is the _first_ byte of `m`, `m[1:33]` is the next 33
-      bytes of `m`, and `m[34:]` is the last 16 bytes of `m`
-    * The raw bytes of the remote party's ephemeral public key (`e`) are to be
-      deserialized into a point on the curve using affine coordinates as encoded
-      by the key's serialized composed format.
-  * If `v` is an unrecognized handshake version, then the responder MUST
-    abort the connection attempt.
-  * `h = SHA-256(h || re.serializeCompressed())`
-    * The responder accumulates the initiator's ephemeral key into the authenticating
-      handshake digest.
-  * `ss = ECDH(re, s.priv)`
-    * The responder performs an ECDH between its static public key and the
-      initiator's ephemeral public key.
-  * `ck, temp_k1 = HKDF(ck, ss)`
-    * A new temporary encryption key is generated, which will
-      shortly be used to check the authenticating MAC.
-  * `p = decryptWithAD(temp_k1, 0, h, c)`
-    * If the MAC check in this operation fails, then the initiator does _not_
-      know the responder's static public key. If so, then the responder MUST terminate the
-      connection without any further messages.
-  * `h = SHA-256(h || c)`
-     * The received ciphertext is mixed into the handshake digest. This step serves
-       to ensure the payload wasn't modified by a MiTM.
+<pre>
+* Read _exactly_ 50 bytes from the network buffer.
+* Parse out the read message (<code>m</code>) into <code>v = m[0]</code>, <code>re = m[1:33]</code>, and <code>c = m[34:]</code>.
+  * where <code>m[0]</code> is the _first_ byte of <code>m</code>, <code>m[1:33]</code> is the next 33
+    bytes of <code>m</code>, and <code>m[34:]</code> is the last 16 bytes of <code>m</code>
+  * The raw bytes of the remote party's ephemeral public key (<code>e</code>) are to be
+    deserialized into a point on the curve using affine coordinates as encoded
+    by the key's serialized composed format.
+* If <code>v</code> is an unrecognized handshake version, then the responder MUST
+  abort the connection attempt.
+* <code>h = SHA-256(h || re.serializeCompressed())</code>
+  * The responder accumulates the initiator's ephemeral key into the authenticating
+    handshake digest.
+* <code>ss = ECDH(re, s.priv)</code>
+  * The responder performs an ECDH between its static public key and the
+    initiator's ephemeral public key.
+* <code>ck, temp_k1 = HKDF(ck, ss)</code>
+  * A new temporary encryption key is generated, which will
+    shortly be used to check the authenticating MAC.
+* <code>p = decryptWithAD(temp_k1, 0, h, c)</code>
+  * If the MAC check in this operation fails, then the initiator does _not_
+    know the responder's static public key. If so, then the responder MUST terminate the
+    connection without any further messages.
+* <code>h = SHA-256(h || c)</code>
+   * The received ciphertext is mixed into the handshake digest. This step serves
+     to ensure the payload wasn't modified by a MiTM.
+</pre>
 
 
-#### Act Two
+=====Act Two=====
+<pre>
 ```
    <- e, ee
+</pre>
 ```
 
 Act Two is sent from the responder to the initiator. Act Two will _only_
@@ -283,122 +299,132 @@ the end of Act One.
 
 The handshake is _exactly_ 50 bytes: 1 byte for the handshake version, 33
 bytes for the compressed ephemeral public key of the responder, and 16 bytes
-for the `poly1305` tag.
+for the <code>poly1305</code> tag.
 
-**Sender Actions:**
+*''Sender Actions:''''
 
-  * `e = generateKey()`
-  * `h = SHA-256(h || e.pub.serializeCompressed())`
-     * The newly generated ephemeral key is accumulated into the running
-       handshake digest.
-  * `ss = ECDH(re, e.priv)`
-     * where `re` is the ephemeral key of the initiator, which was received
-       during Act One
-  * `ck, temp_k2 = HKDF(ck, ss)`
-     * A new temporary encryption key is generated, which is
-       used to generate the authenticating MAC.
-  * `c = encryptWithAD(temp_k2, 0, h, zero)`
-     * where `zero` is a zero-length plaintext
-  * `h = SHA-256(h || c)`
-     * Finally, the generated ciphertext is accumulated into the authenticating
-       handshake digest.
-  * Send `m = 0 || e.pub.serializeCompressed() || c` to the initiator over the network buffer.
-
-
-**Receiver Actions:**
-
-  * Read _exactly_ 50 bytes from the network buffer.
-  * Parse out the read message (`m`) into `v = m[0]`, `re = m[1:33]`, and `c = m[34:]`.
-    * where `m[0]` is the _first_ byte of `m`, `m[1:33]` is the next 33
-      bytes of `m`, and `m[34:]` is the last 16 bytes of `m`
-  * If `v` is an unrecognized handshake version, then the responder MUST
-    abort the connection attempt.
-  * `h = SHA-256(h || re.serializeCompressed())`
-  * `ss = ECDH(re, e.priv)`
-    * where `re` is the responder's ephemeral public key
-    * The raw bytes of the remote party's ephemeral public key (`re`) are to be
-      deserialized into a point on the curve using affine coordinates as encoded
-      by the key's serialized composed format.
-  * `ck, temp_k2 = HKDF(ck, ss)`
-     * A new temporary encryption key is generated, which is
-       used to generate the authenticating MAC.
-  * `p = decryptWithAD(temp_k2, 0, h, c)`
-    * If the MAC check in this operation fails, then the initiator MUST
-      terminate the connection without any further messages.
-  * `h = SHA-256(h || c)`
-     * The received ciphertext is mixed into the handshake digest. This step serves
-       to ensure the payload wasn't modified by a MiTM.
+<pre>
+* <code>e = generateKey()</code>
+* <code>h = SHA-256(h || e.pub.serializeCompressed())</code>
+   * The newly generated ephemeral key is accumulated into the running
+     handshake digest.
+* <code>ss = ECDH(re, e.priv)</code>
+   * where <code>re</code> is the ephemeral key of the initiator, which was received
+     during Act One
+* <code>ck, temp_k2 = HKDF(ck, ss)</code>
+   * A new temporary encryption key is generated, which is
+     used to generate the authenticating MAC.
+* <code>c = encryptWithAD(temp_k2, 0, h, zero)</code>
+   * where <code>zero</code> is a zero-length plaintext
+* <code>h = SHA-256(h || c)</code>
+   * Finally, the generated ciphertext is accumulated into the authenticating
+     handshake digest.
+* Send <code>m = 0 || e.pub.serializeCompressed() || c</code> to the initiator over the network buffer.
+</pre>
 
 
-#### Act Three
+*''Receiver Actions:''''
+
+<pre>
+* Read _exactly_ 50 bytes from the network buffer.
+* Parse out the read message (<code>m</code>) into <code>v = m[0]</code>, <code>re = m[1:33]</code>, and <code>c = m[34:]</code>.
+  * where <code>m[0]</code> is the _first_ byte of <code>m</code>, <code>m[1:33]</code> is the next 33
+    bytes of <code>m</code>, and <code>m[34:]</code> is the last 16 bytes of <code>m</code>
+* If <code>v</code> is an unrecognized handshake version, then the responder MUST
+  abort the connection attempt.
+* <code>h = SHA-256(h || re.serializeCompressed())</code>
+* <code>ss = ECDH(re, e.priv)</code>
+  * where <code>re</code> is the responder's ephemeral public key
+  * The raw bytes of the remote party's ephemeral public key (<code>re</code>) are to be
+    deserialized into a point on the curve using affine coordinates as encoded
+    by the key's serialized composed format.
+* <code>ck, temp_k2 = HKDF(ck, ss)</code>
+   * A new temporary encryption key is generated, which is
+     used to generate the authenticating MAC.
+* <code>p = decryptWithAD(temp_k2, 0, h, c)</code>
+  * If the MAC check in this operation fails, then the initiator MUST
+    terminate the connection without any further messages.
+* <code>h = SHA-256(h || c)</code>
+   * The received ciphertext is mixed into the handshake digest. This step serves
+     to ensure the payload wasn't modified by a MiTM.
+</pre>
+
+
+=====Act Three=====
+<pre>
 ```
    -> s, se
+</pre>
 ```
 
 Act Three is the final phase in the authenticated key agreement described in
 this section. This act is sent from the initiator to the responder as a
 concluding step. Act Three is executed _if and only if_ Act Two was successful.
 During Act Three, the initiator transports its static public key to the
-responder encrypted with _strong_ forward secrecy, using the accumulated `HKDF`
+responder encrypted with _strong_ forward secrecy, using the accumulated <code>HKDF</code>
 derived secret key at this point of the handshake.
 
 The handshake is _exactly_ 66 bytes: 1 byte for the handshake version, 33
-bytes for the ephemeral public key encrypted with the `ChaCha20` stream
+bytes for the ephemeral public key encrypted with the <code>ChaCha20</code> stream
 cipher, 16 bytes for the encrypted public key's tag generated via the AEAD
 construction, and 16 bytes for a final authenticating tag.
 
-**Sender Actions:**
+*''Sender Actions:''''
 
-  * `c = encryptWithAD(temp_k2, 1, h, s.pub.serializeCompressed())`
-    * where `s` is the static public key of the initiator
-  * `h = SHA-256(h || c)`
-  * `ss = ECDH(re, s.priv)`
-    * where `re` is the ephemeral public key of the responder.
-  * `ck, temp_k3 = HKDF(ck, ss)`
-    * The final intermediate shared secret is mixed into the running chaining key.
-  * `t = encryptWithAD(temp_k3, 0, h, zero)`
-     * where `zero` is a zero-length plaintext
-  * `sk, rk = HKDF(ck, zero)`
-     * where `zero` is a zero-length plaintext,
-       `sk` is the key to be used by the initiator to encrypt messages to the
-       responder,
-       and `rk` is the key to be used by the initiator to decrypt messages sent by
-       the responder
-     * The final encryption keys to be used for sending and
-       receiving messages for the duration of the session are generated.
-  * `rn = 0, sn = 0`
-     * The sending and receiving nonces are initialized to zero.
-  * Send `m = 0 || c || t` over the network buffer.
+<pre>
+* <code>c = encryptWithAD(temp_k2, 1, h, s.pub.serializeCompressed())</code>
+  * where <code>s</code> is the static public key of the initiator
+* <code>h = SHA-256(h || c)</code>
+* <code>ss = ECDH(re, s.priv)</code>
+  * where <code>re</code> is the ephemeral public key of the responder.
+* <code>ck, temp_k3 = HKDF(ck, ss)</code>
+  * The final intermediate shared secret is mixed into the running chaining key.
+* <code>t = encryptWithAD(temp_k3, 0, h, zero)</code>
+   * where <code>zero</code> is a zero-length plaintext
+* <code>sk, rk = HKDF(ck, zero)</code>
+   * where <code>zero</code> is a zero-length plaintext,
+     <code>sk</code> is the key to be used by the initiator to encrypt messages to the
+     responder,
+     and <code>rk</code> is the key to be used by the initiator to decrypt messages sent by
+     the responder
+   * The final encryption keys to be used for sending and
+     receiving messages for the duration of the session are generated.
+* <code>rn = 0, sn = 0</code>
+   * The sending and receiving nonces are initialized to zero.
+* Send <code>m = 0 || c || t</code> over the network buffer.
+</pre>
 
 
-**Receiver Actions:**
+*''Receiver Actions:''''
 
-  * Read _exactly_ 66 bytes from the network buffer.
-  * Parse out the read message (`m`) into `v = m[0]`, `c = m[1:49]` and `t = m[50:]`
-  * If `v` is an unrecognized handshake version, then the responder MUST
-    abort the connection attempt.
-  * `rs = decryptWithAD(temp_k2, 1, h, c)`
-     * At this point, the responder has recovered the static public key of the
-       initiator.
-  * `h = SHA-256(h || c)`
-  * `ss = ECDH(rs, e.priv)`
-     * where `e` is the responder's original ephemeral key
-  * `ck, temp_k3 = HKDF(ck, ss)`
-  * `p = decryptWithAD(temp_k3, 0, h, t)`
-     * If the MAC check in this operation fails, then the responder MUST
-       terminate the connection without any further messages.
-  * `rk, sk = HKDF(ck, zero)`
-     * where `zero` is a zero-length plaintext,
-       `rk` is the key to be used by the responder to decrypt the messages sent
-       by the initiator,
-       and `sk` is the key to be used by the responder to encrypt messages to
-       the initiator
-     * The final encryption keys to be used for sending and
-       receiving messages for the duration of the session are generated.
-  * `rn = 0, sn = 0`
-     * The sending and receiving nonces are initialized to zero.
+<pre>
+* Read _exactly_ 66 bytes from the network buffer.
+* Parse out the read message (<code>m</code>) into <code>v = m[0]</code>, <code>c = m[1:49]</code> and <code>t = m[50:]</code>
+* If <code>v</code> is an unrecognized handshake version, then the responder MUST
+  abort the connection attempt.
+* <code>rs = decryptWithAD(temp_k2, 1, h, c)</code>
+   * At this point, the responder has recovered the static public key of the
+     initiator.
+* <code>h = SHA-256(h || c)</code>
+* <code>ss = ECDH(rs, e.priv)</code>
+   * where <code>e</code> is the responder's original ephemeral key
+* <code>ck, temp_k3 = HKDF(ck, ss)</code>
+* <code>p = decryptWithAD(temp_k3, 0, h, t)</code>
+   * If the MAC check in this operation fails, then the responder MUST
+     terminate the connection without any further messages.
+* <code>rk, sk = HKDF(ck, zero)</code>
+   * where <code>zero</code> is a zero-length plaintext,
+     <code>rk</code> is the key to be used by the responder to decrypt the messages sent
+     by the initiator,
+     and <code>sk</code> is the key to be used by the responder to encrypt messages to
+     the initiator
+   * The final encryption keys to be used for sending and
+     receiving messages for the duration of the session are generated.
+* <code>rn = 0, sn = 0</code>
+   * The sending and receiving nonces are initialized to zero.
+</pre>
 
-## Lightning Message Specification
+===Lightning Message Specification===
 
 At the conclusion of Act Three, both sides have derived the encryption keys, which will be used to encrypt and decrypt messages for the remainder of the
 session.
@@ -407,17 +433,18 @@ The actual Lightning protocol messages are encapsulated within AEAD ciphertexts.
 another AEAD ciphertext, which encodes the total length of the following Lightning
 message (not counting its MAC).
 
-The *maximum* size of _any_ Lightning message MUST NOT exceed `65535` bytes. A
-maximum size of `65535` simplifies testing, makes memory management 
+The ''maximum'' size of _any_ Lightning message MUST NOT exceed <code>65535</code> bytes. A
+maximum size of <code>65535</code> simplifies testing, makes memory management 
 easier, and helps mitigate memory-exhaustion attacks.
 
 In order to make traffic analysis more difficult, the length prefix for
 all encrypted Lightning messages is also encrypted. Additionally a
-16-byte `Poly-1305` tag is added to the encrypted length prefix in order to ensure
+16-byte <code>Poly-1305</code> tag is added to the encrypted length prefix in order to ensure
 that the packet length hasn't been modified when in-flight and also to avoid
 creating a decryption oracle.
 
 The structure of packets on the wire resembles the following:
+<pre>
 ```
 +-------------------------------
 |2-byte encrypted message length|
@@ -434,84 +461,92 @@ The structure of packets on the wire resembles the following:
 |     16-byte MAC of the        |
 |      Lightning message        |
 +-------------------------------
+</pre>
 ```
 The prefixed message length is encoded as a 2-byte big-endian integer,
-for a total maximum packet length of `2 + 16 + 65535 + 16` = `65569` bytes.
+for a total maximum packet length of <code>2 + 16 + 65535 + 16</code> = <code>65569</code> bytes.
 
-### Encrypting Messages
+====Encrypting Messages====
 
-In order to encrypt a Lightning message (`m`), given a sending key (`sk`) and a nonce
-(`sn`), the following is done:
+In order to encrypt a Lightning message (<code>m</code>), given a sending key (<code>sk</code>) and a nonce
+(<code>sn</code>), the following is done:
 
-  * let `l = len(m)`
-    * where `len` obtains the length in bytes of the Lightning message
-  * Serialize `l` into 2 bytes encoded as a big-endian integer.
-  * Encrypt `l` (using `ChaChaPoly-1305`, `sn`, and `sk`), to obtain `lc`
-    (18 bytes)
-    * The nonce `sn` is encoded as a 96-bit little-endian number. As the
-      decoded nonce is 64 bits, the 96-bit nonce is encoded as: 32 bits
-      of leading zeroes followed by a 64-bit value.
-        * The nonce `sn` MUST be incremented after this step.
-    * A zero-length byte slice is to be passed as the AD (associated data).
-  * Finally, encrypt the message itself (`m`) using the same procedure used to
-    encrypt the length prefix. Let encrypted ciphertext be known as `c`.
-    * The nonce `sn` MUST be incremented after this step.
-  * Send `lc || c` over the network buffer.
+<pre>
+* let <code>l = len(m)</code>
+  * where <code>len</code> obtains the length in bytes of the Lightning message
+* Serialize <code>l</code> into 2 bytes encoded as a big-endian integer.
+* Encrypt <code>l</code> (using <code>ChaChaPoly-1305</code>, <code>sn</code>, and <code>sk</code>), to obtain <code>lc</code>
+  (18 bytes)
+  * The nonce <code>sn</code> is encoded as a 96-bit little-endian number. As the
+    decoded nonce is 64 bits, the 96-bit nonce is encoded as: 32 bits
+    of leading zeroes followed by a 64-bit value.
+      * The nonce <code>sn</code> MUST be incremented after this step.
+  * A zero-length byte slice is to be passed as the AD (associated data).
+* Finally, encrypt the message itself (<code>m</code>) using the same procedure used to
+  encrypt the length prefix. Let encrypted ciphertext be known as <code>c</code>.
+  * The nonce <code>sn</code> MUST be incremented after this step.
+* Send <code>lc || c</code> over the network buffer.
+</pre>
 
 
-### Decrypting Messages
+====Decrypting Messages====
 
 In order to decrypt the _next_ message in the network stream, the following is
 done:
 
-  * Read _exactly_ 18 bytes from the network buffer.
-  * Let the encrypted length prefix be known as `lc`
-  * Decrypt `lc` (using `ChaCha20-Poly1305`, `rn`, and `rk`), to obtain the size of
-    the encrypted packet `l`.
-    * A zero-length byte slice is to be passed as the AD (associated data).
-    * The nonce `rn` MUST be incremented after this step.
-  * Read _exactly_ `l+16` bytes from the network buffer, let the bytes be known as
-    `c`.
-  * Decrypt `c` (using `ChaCha20-Poly1305`, `rn`, and `rk`), to obtain decrypted
-    plaintext packet `p`.
-    * The nonce `rn` MUST be incremented after this step.
+<pre>
+* Read _exactly_ 18 bytes from the network buffer.
+* Let the encrypted length prefix be known as <code>lc</code>
+* Decrypt <code>lc</code> (using <code>ChaCha20-Poly1305</code>, <code>rn</code>, and <code>rk</code>), to obtain the size of
+  the encrypted packet <code>l</code>.
+  * A zero-length byte slice is to be passed as the AD (associated data).
+  * The nonce <code>rn</code> MUST be incremented after this step.
+* Read _exactly_ <code>l+16</code> bytes from the network buffer, let the bytes be known as
+  <code>c</code>.
+* Decrypt <code>c</code> (using <code>ChaCha20-Poly1305</code>, <code>rn</code>, and <code>rk</code>), to obtain decrypted
+  plaintext packet <code>p</code>.
+  * The nonce <code>rn</code> MUST be incremented after this step.
+</pre>
 
 
-## Lightning Message Key Rotation
+===Lightning Message Key Rotation===
 
 Changing keys regularly and forgetting previous keys is useful to
 prevent the decryption of old messages, in the case of later key leakage (i.e.
 backwards secrecy).
 
-Key rotation is performed for _each_ key (`sk` and `rk`) _individually_. A key
+Key rotation is performed for _each_ key (<code>sk</code> and <code>rk</code>) _individually_. A key
 is to be rotated after a party sends or decrypts 1000 messages with it.
 This can be properly accounted for by rotating the key once the nonce dedicated
 to it exceeds 1000.
 
-Key rotation for a key `k` is performed according to the following:
+Key rotation for a key <code>k</code> is performed according to the following:
 
-  * Let `ck` be the chaining key obtained at the end of Act Three.
-  * `ck', k' = HKDF(ck, k)`
-  * Reset the nonce for the key to `n = 0`.
-  * `k = k'`
-  * `ck = ck'`
-  
-# Security Considerations
+<pre>
+* Let <code>ck</code> be the chaining key obtained at the end of Act Three.
+* <code>ck', k' = HKDF(ck, k)</code>
+* Reset the nonce for the key to <code>n = 0</code>.
+* <code>k = k'</code>
+* <code>ck = ck'</code>
+
+</pre>
+==Security Considerations==
 
 It is strongly recommended that existing, commonly-used, validated
 libraries be used for encryption and decryption, to avoid the many
 implementation pitfalls possible.
 
-# Appendix A: Transport Test Vectors
+==Appendix A: Transport Test Vectors==
 
-To make a repeatable test handshake, the following specifies what `generateKey()` will
-return (i.e. the value for `e.priv`) for each side. Note that this
+To make a repeatable test handshake, the following specifies what <code>generateKey()</code> will
+return (i.e. the value for <code>e.priv</code>) for each side. Note that this
 is a violation of the spec, which requires randomness.
 
-## Initiator Tests
+===Initiator Tests===
 
 The initiator should produce the given output when fed this input.
 The comments reflect internal state for debugging.
+<pre>
 ```
     name: transport-initiator successful handshake
     rs.pub: 0x028d7500dd4c12685d1f568b4c2b5048e8534b873319f3a8daa612b469132ec7f7
@@ -593,10 +628,12 @@ The comments reflect internal state for debugging.
     # Act Two
     input: 0x0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730af
     output: ERROR (ACT2_BAD_TAG)
+</pre>
 ```
-## Responder Tests
+===Responder Tests===
 
 The responder should produce the given output when fed this input.
+<pre>
 ```
     name: transport-responder successful handshake
     ls.priv=2121212121212121212121212121212121212121212121212121212121212121
@@ -736,8 +773,9 @@ The responder should produce the given output when fed this input.
     # Act Three
     input: 0x00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139bb
     output: ERROR (ACT3_BAD_TAG)
+</pre>
 ```
-## Message Encryption Tests
+===Message Encryption Tests===
 
 In this test, the initiator sends length 5 messages containing "hello"
 1001 times. Only six example outputs are shown, for brevity and to test
@@ -762,20 +800,20 @@ two key rotations:
     output 1000: 0x4a2f3cc3b5e78ddb83dcb426d9863d9d9a723b0337c89dd0b005d89f8d3c05c52b76b29b740f09
     output 1001: 0x2ecd8c8a5629d0d02ab457a0fdd0f7b90a192cd46be5ecb6ca570bfc5e268338b1a16cf4ef2d36
 
-# Acknowledgments
+==Acknowledgments==
 
 TODO(roasbeef); fin
 
-# References
+==References==
 1. <a id="reference-1">https://tools.ietf.org/html/rfc7539</a>
 2. <a id="reference-2">http://noiseprotocol.org/noise.html</a>
 3. <a id="reference-3">https://tools.ietf.org/html/rfc5869</a>
 
 
-# Authors
+==Authors==
 
 FIXME
 
-![Creative Commons License](https://i.creativecommons.org/l/by/4.0/88x31.png "License CC-BY")
+[[https://i.creativecommons.org/l/by/4.0/88x31.png "License CC-BY"|alt=Creative Commons License]]
 <br>
-This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
+This work is licensed under a [http://creativecommons.org/licenses/by/4.0/ Creative Commons Attribution 4.0 International License].
