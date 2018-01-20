@@ -37,7 +37,7 @@ echo X"$0" |
  }
  s/.*/./; q'`
 
-# This script should be in the tools/ directory of the
+# This script should be in the scripts/ directory of the
 # repository.
 homedir="$my_dir"/..
 

@@ -35,7 +35,7 @@ consists of the funding node (funder) sending an `open_channel` message,
 followed by the responding node (fundee) sending `accept_channel`. With the
 channel parameters locked in, the funder is able to create the funding
 transaction and both versions of the commitment transaction, as described in
-[BOLT #3](https://github.com/lightningnetwork/lightning-rfc/blob/master/03-transactions.md#bolt-3-bitcoin-transaction-and-script-formats).
+[BOLT #3](bip-0203.mediawiki#bolt-3-bitcoin-transaction-and-script-formats).
 The funder then sends the outpoint of the funding output with the `funding_created`
 message, along with the signature for the fundee's version of the commitment
 transaction. Once the fundee learns the funding outpoint, it's able to
@@ -132,7 +132,7 @@ node can offer.
 `feerate_per_kw` indicates the initial fee rate in satoshi per 1000-weight
 (i.e. 1/4 the more normally-used 'satoshi per 1000 vbytes') that this
 side will pay for commitment and HTLC transactions, as described in
-[BOLT #3](03-transactions.md#fee-calculation) (this can be adjusted
+[BOLT #3](bip-0203.mediawiki#fee-calculation) (this can be adjusted
 later with an `update_fee` message).
 
 `to_self_delay` is the number of blocks that the other node's to-self
@@ -144,7 +144,7 @@ its own funds.
 the funding transaction output.
 
 The various `_basepoint` fields are used to derive unique
-keys as described in [BOLT #3](03-transactions.md#key-derivation) for each commitment
+keys as described in [BOLT #3](bip-0203.mediawiki#key-derivation) for each commitment
 transaction. Varying these keys ensures that the transaction ID of
 each commitment transaction is unpredictable to an external observer,
 even if one commitment transaction is seen; this property is very
@@ -158,7 +158,7 @@ Only the least-significant bit of `channel_flags` is currently
 defined: `announce_channel`. This indicates whether the initiator of
 the funding flow wishes to advertise this channel publicly to the
 network, as detailed within [BOLT
-#7](https://github.com/lightningnetwork/lightning-rfc/blob/master/07-routing-gossip.md#bolt-7-p2p-node-and-channel-discovery).
+#7](bip-0207.mediawiki#bolt-7-p2p-node-and-channel-discovery).
 
 The `shutdown_scriptpubkey` allows the sending node to commit to where
 funds will go on mutual close, which the remote node should enforce
@@ -174,7 +174,7 @@ The sending node:
   - MUST set `funding_satoshis` to less than 2^24 satoshi.
   - MUST set `push_msat` to equal or less than 1000 * `funding_satoshis`.
   - MUST set `funding_pubkey`, `revocation_basepoint`, `htlc_basepoint`, `payment_basepoint`, and `delayed_payment_basepoint` to valid DER-encoded, compressed, secp256k1 pubkeys.
-  - MUST set `first_per_commitment_point` to the per-commitment point to be used for the initial commitment transaction, derived as specified in [BOLT #3](03-transactions.md#per-commitment-secret-requirements).
+  - MUST set `first_per_commitment_point` to the per-commitment point to be used for the initial commitment transaction, derived as specified in [BOLT #3](bip-0203.mediawiki#per-commitment-secret-requirements).
   - MUST set undefined bits in `channel_flags` to 0.
   - if both nodes advertised the `option_upfront_shutdown_script` feature:
     - MUST include either a valid `shutdown_scriptpubkey` as required by `shutdown` `scriptpubkey`, or a zero-length `shutdown_scriptpubkey`.
@@ -201,7 +201,7 @@ The receiving node MAY fail the channel if:
   - it considers `max_htlc_value_in_flight_msat` too small.
   - it considers `channel_reserve_satoshis` too large.
   - it considers `max_accepted_htlcs` too small.
-  - it considers `dust_limit_satoshis` too small and plans to rely on the sending node publishing its commitment transaction in the event of a data loss (see [message-retransmission](02-peer-protocol.md#message-retransmission)).
+  - it considers `dust_limit_satoshis` too small and plans to rely on the sending node publishing its commitment transaction in the event of a data loss (see [message-retransmission](bip-0202.mediawiki#message-retransmission)).
 
 The receiving node MUST fail the channel if:
   - `push_msat` is greater than `funding_satoshis` * 1000.
@@ -292,8 +292,8 @@ The sender MUST set:
   - `temporary_channel_id` the same as the `temporary_channel_id` in the `open_channel` message.
   - `funding_txid` to the transaction ID of a non-malleable transaction,
     - and MUST NOT broadcast this transaction.
-  - `funding_output_index` to the output number of that transaction that corresponds the funding transaction output, as defined in [BOLT #3](03-transactions.md#funding-transaction-output).
-  - `signature` to the valid signature using its `funding_pubkey` for the initial commitment transaction, as defined in [BOLT #3](03-transactions.md#commitment-transaction).
+  - `funding_output_index` to the output number of that transaction that corresponds the funding transaction output, as defined in [BOLT #3](bip-0203.mediawiki#funding-transaction-output).
+  - `signature` to the valid signature using its `funding_pubkey` for the initial commitment transaction, as defined in [BOLT #3](bip-0203.mediawiki#commitment-transaction).
 
 The sender:
   - when creating the funding transaction:
@@ -326,7 +326,7 @@ This message introduces the `channel_id` to identify the channel. It's derived f
 
 The sender MUST set:
   - `channel_id` by exclusive-OR of the `funding_txid` and the `funding_output_index` from the `funding_created` message.
-  - `signature` to the valid signature, using its `funding_pubkey` for the initial commitment transaction, as defined in [BOLT #3](03-transactions.md#commitment-transaction).
+  - `signature` to the valid signature, using its `funding_pubkey` for the initial commitment transaction, as defined in [BOLT #3](bip-0203.mediawiki#commitment-transaction).
 
 The recipient:
   - if `signature` is incorrect:
@@ -352,7 +352,7 @@ The sender MUST:
   - set `next_per_commitment_point` to the
 per-commitment point to be used for the following commitment
 transaction, derived as specified in
-[BOLT #3](03-transactions.md#per-commitment-secret-requirements).
+[BOLT #3](bip-0203.mediawiki#per-commitment-secret-requirements).
 
 A non-funding node (fundee):
   - SHOULD forget the channel if it does not see the
@@ -478,24 +478,24 @@ A sending node:
   - after `shutdown` has been received, AND no HTLCs remain in either commitment transaction:
     - SHOULD send a `closing_signed` message.
   - MUST set `fee_satoshis` less than or equal to the
- base fee of the final commitment transaction, as calculated in [BOLT #3](03-transactions.md#fee-calculation).
+ base fee of the final commitment transaction, as calculated in [BOLT #3](bip-0203.mediawiki#fee-calculation).
   - SHOULD set the initial `fee_satoshis` according to its
  estimate of cost of inclusion in a block.
   - MUST set `signature` to the Bitcoin signature of the close
- transaction, as specified in [BOLT #3](03-transactions.md#closing-transaction).
+ transaction, as specified in [BOLT #3](bip-0203.mediawiki#closing-transaction).
 
 The receiving node:
   - after `shutdown` has been received, AND no HTLCs remain in either commitment transaction:
     - SHOULD send a `closing_signed` message.
   - if the `signature` is not valid for either variant of close transaction
-  specified in [BOLT #3](03-transactions.md#closing-transaction):
+  specified in [BOLT #3](bip-0203.mediawiki#closing-transaction):
     - MUST fail the connection.
   - if `fee_satoshis` is equal to its previously sent `fee_satoshis`:
     - SHOULD sign and broadcast the final closing transaction.
     - MAY close the connection.
   - otherwise, if `fee_satoshis` is greater than
 the base fee of the final commitment transaction as calculated in
-[BOLT #3](03-transactions.md#fee-calculation):
+[BOLT #3](bip-0203.mediawiki#fee-calculation):
     - MUST fail the connection.
   - if `fee_satoshis` is not strictly
 between its last-sent `fee_satoshis` and its previously-received
@@ -520,7 +520,7 @@ reason to pay a premium for rapid processing.
 
 ## Normal Operation
 
-Once both nodes have exchanged `funding_locked` (and optionally [`announcement_signatures`](https://github.com/lightningnetwork/lightning-rfc/blob/master/07-routing-gossip.md#the-announcement_signatures-message)), the channel can be used to make payments via Hash TimeLocked Contracts.
+Once both nodes have exchanged `funding_locked` (and optionally [`announcement_signatures`](bip-0207.mediawiki#the-announcement_signatures-message)), the channel can be used to make payments via Hash TimeLocked Contracts.
 
 Changes are sent in batches: one or more `update_` messages are sent before a
 `commitment_signed` message, as in the following diagram:
@@ -616,8 +616,8 @@ received.
     HTLC on-chain before A can time it out on-chain.
 
 The critical settings here are the `cltv_expiry_delta` in
-[BOLT #7](07-routing-gossip.md#the-channel_update-message) and the
-related `min_final_cltv_expiry` in [BOLT #11](11-payment-encoding.md#tagged-fields).
+[BOLT #7](bip-0207.mediawiki#the-channel_update-message) and the
+related `min_final_cltv_expiry` in [BOLT #11](bip-0211.mediawiki#tagged-fields).
 `cltv_expiry_delta` is the minimum difference in HTLC CLTV timeouts, in
 the forwarding case (B). `min_final_ctlv_expiry` is the minimum difference
 between HTLC CLTV timeout and the current block height, for the
@@ -686,7 +686,7 @@ the channel has to be failed and the HTLC fulfilled on-chain before its
 4. the minimum `cltv_expiry` accepted for terminal payments: the
    worst case for the terminal node C is `2R+G+S` blocks (as, again, steps
    1-3 above don't apply). The default in
-   [BOLT #11](11-payment-encoding.md) is 9, which is slightly more
+   [BOLT #11](bip-0211.mediawiki) is 9, which is slightly more
    conservative than the 7 that this calculation suggests.
 
 #### Requirements
@@ -712,10 +712,10 @@ Either node can send `update_add_htlc` to offer an HTLC to the other,
 which is redeemable in return for a payment preimage. Amounts are in
 millisatoshi, though on-chain enforcement is only possible for whole
 satoshi amounts greater than the dust limit (in commitment transactions these are rounded down as
-specified in [BOLT #3](03-transactions.md)).
+specified in [BOLT #3](bip-0203.mediawiki)).
 
 The format of the `onion_routing_packet` portion, which indicates where the payment
-is destined, is described in [BOLT #4](04-onion-routing.md).
+is destined, is described in [BOLT #4](bip-0204.mediawiki).
 
 1. type: 128 (`update_add_htlc`)
 2. data:
@@ -786,7 +786,7 @@ recipient code (though strict checking may help debugging).
 sides send the maximum number of HTLCs, the `commitment_signed` message will
 still be under the maximum message size. It also ensures that
 a single penalty transaction can spend the entire commitment transaction,
-as calculated in [BOLT #5](05-onchain.md#penalty-transaction-weight-calculation).
+as calculated in [BOLT #5](bip-0205.mediawiki#penalty-transaction-weight-calculation).
 
 `cltv_expiry` values equal to or greater than 500000000 would indicate a time in
 seconds, and the protocol only supports an expiry in blocks.
@@ -819,7 +819,7 @@ For a timed out or route-failed HTLC:
    * [`len`:`reason`]
 
 The `reason` field is an opaque encrypted blob for the benefit of the
-original HTLC initiator, as defined in [BOLT #4](04-onion-routing.md);
+original HTLC initiator, as defined in [BOLT #4](bip-0204.mediawiki);
 however, there's a special malformed failure variant for the case where
 the peer couldn't parse it: in this case the current node instead takes action, encrypting
 it into a `update_fail_htlc` for relaying.
@@ -881,7 +881,7 @@ such detection is left as an option.
 ### Committing Updates So Far: `commitment_signed`
 
 When a node has changes for the remote commitment, it can apply them,
-sign the resulting transaction (as defined in [BOLT #3](03-transactions.md)), and send a
+sign the resulting transaction (as defined in [BOLT #3](bip-0203.mediawiki)), and send a
 `commitment_signed` message.
 
 1. type: 132 (`commitment_signed`)
@@ -934,7 +934,7 @@ of the `commitment_signed`, so this is a logical time for the `commitment_signed
 to apply (to its own commitment) any pending updates it sent before
 that `commitment_signed`.
 
-The description of key derivation is in [BOLT #3](03-transactions.md#key-derivation).
+The description of key derivation is in [BOLT #3](bip-0203.mediawiki#key-derivation).
 
 1. type: 133 (`revoke_and_ack`)
 2. data:
@@ -953,7 +953,7 @@ A sending node:
 A receiving node:
   - if `per_commitment_secret` does not generate the previous `per_commitment_point`:
     - MUST fail the channel.
-  - if the `per_commitment_secret` was not generated by the protocol in [BOLT #3](03-transactions.md#per-commitment-secret-requirements):
+  - if the `per_commitment_secret` was not generated by the protocol in [BOLT #3](bip-0203.mediawiki#per-commitment-secret-requirements):
     - MAY fail the channel.
 
 A node:
@@ -975,10 +975,10 @@ There is a possibility of a race, as the recipient can add new HTLCs
 before it receives the `update_fee`. Under this circumstance, the sender may
 not be able to afford the fee on its own commitment transaction, once the `update_fee`
 is finally acknowledged by the recipient. In this case, the fee will be less
-than the fee rate, as described in [BOLT #3](03-transactions.md#fee-payment).
+than the fee rate, as described in [BOLT #3](bip-0203.mediawiki#fee-payment).
 
 The exact calculation used for deriving the fee from the fee rate is
-given in [BOLT #3](03-transactions.md#fee-calculation).
+given in [BOLT #3](bip-0203.mediawiki#fee-calculation).
 
 1. type: 134 (`update_fee`)
 2. data:
@@ -1038,7 +1038,7 @@ operation, acknowledgments of updates are delayed until the
 that the updates have been received. This also means that the receiving
 node only needs to store updates upon receipt of `commitment_signed`.
 
-Note that messages described in [BOLT #7](07-routing-gossip.md) are
+Note that messages described in [BOLT #7](bip-0207.mediawiki) are
 independent of particular channels; their transmission requirements
 are covered there, and besides being transmitted after `init` (as all
 messages are), they are independent of requirements here.

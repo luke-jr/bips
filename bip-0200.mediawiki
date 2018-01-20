@@ -12,16 +12,16 @@ help us improve.
 
 This is version 0.
 
-1. [BOLT #1](01-messaging.md): Base Protocol
-2. [BOLT #2](02-peer-protocol.md): Peer Protocol for Channel Management
-3. [BOLT #3](03-transactions.md): Bitcoin Transaction and Script Formats
-4. [BOLT #4](04-onion-routing.md): Onion Routing Protocol
-5. [BOLT #5](05-onchain.md): Recommendations for On-chain Transaction Handling
-7. [BOLT #7](07-routing-gossip.md): P2P Node and Channel Discovery
-8. [BOLT #8](08-transport.md): Encrypted and Authenticated Transport
-9. [BOLT #9](09-features.md): Assigned Feature Flags
-10. [BOLT #10](10-dns-bootstrap.md): DNS Bootstrap and Assisted Node Location
-11. [BOLT #11](11-payment-encoding.md): Invoice Protocol for Lightning Payments
+1. [BOLT #1](bip-0201.mediawiki): Base Protocol
+2. [BOLT #2](bip-0202.mediawiki): Peer Protocol for Channel Management
+3. [BOLT #3](bip-0203.mediawiki): Bitcoin Transaction and Script Formats
+4. [BOLT #4](bip-0204.mediawiki): Onion Routing Protocol
+5. [BOLT #5](bip-0205.mediawiki): Recommendations for On-chain Transaction Handling
+7. [BOLT #7](bip-0207.mediawiki): P2P Node and Channel Discovery
+8. [BOLT #8](bip-0208.mediawiki): Encrypted and Authenticated Transport
+9. [BOLT #9](bip-0209.mediawiki): Assigned Feature Flags
+10. [BOLT #10](bip-0210.mediawiki): DNS Bootstrap and Assisted Node Location
+11. [BOLT #11](bip-0211.mediawiki): Invoice Protocol for Lightning Payments
 
 ## Glossary and Terminology Guide
 

@@ -1,10 +1,10 @@
 #! /bin/sh
 
 # To run all tests, try:
-# grep 'name: .*commitment tx' ../03-transactions.md | cut -d: -f2- | while read t; do ./bolt3-test-vector.sh $t || break; done
+# grep 'name: .*commitment tx' ../bip-0203.mediawiki | cut -d: -f2- | while read t; do ./bolt3-test-vector.sh $t || break; done
 
 TESTDIR=/tmp/bolt3-testdir.$$
-BOLT3=../03-transactions.md
+BOLT3=../bip-0203.mediawiki
 
 set -e
 CLI="bitcoin-cli -datadir=$TESTDIR"

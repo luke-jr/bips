@@ -160,7 +160,7 @@ public channel associated with its public key. The `r` field MUST contain
 one or more ordered entries, indicating the forward route from a
 public node to the final destination. For each entry, the `pubkey` is the
 node ID of the start of the channel; `short_channel_id` is the short channel ID
-field to identify the channel; and `fee_base_msat`, `fee_proportional_millionths`, and `cltv_expiry_delta` are as specified in [BOLT #7](07-routing-gossip.md#the-channel_update-message). A writer MAY include more than one `r` field to
+field to identify the channel; and `fee_base_msat`, `fee_proportional_millionths`, and `cltv_expiry_delta` are as specified in [BOLT #7](bip-0207.mediawiki#the-channel_update-message). A writer MAY include more than one `r` field to
 provide multiple routing options.
 
 A writer MUST pad field data to a multiple of 5 bits, using zeroes.
@@ -225,7 +225,7 @@ assist in future partial-knowledge routing.
 # Payer / Payee Interactions
 
 These are generally defined by the rest of the Lightning BOLT series,
-but it's worth noting that [BOLT #5](05-onchain.md) specifies that the payee SHOULD
+but it's worth noting that [BOLT #5](bip-0205.mediawiki) specifies that the payee SHOULD
 accept up to twice the expected `amount`, so the payer can make
 payments harder to track by adding small variations.
 
