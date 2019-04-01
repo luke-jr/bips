@@ -1,0 +1,69 @@
+<pre>
+  BIP: ?
+  Layer: Applications
+  Title: Signed USD Price Indicator
+  Author: Luke Dashjr <luke+bip@dashjr.org>
+  Comments-Summary: No comments yet.
+  Comments-URI: https://github.com/bitcoin/bips/wiki/Comments:BIP-????
+  Status: Draft
+  Type: Standards Track
+  Created: 2019-04-01
+  License: BSD-2-Clause
+</pre>
+
+==Abstract==
+
+This BIP proposes a method to explicitly specify and sign the USD/BTC price for transactions.
+
+==Copyright==
+
+This BIP is licensed under the BSD 2-clause license.
+
+==Motivation==
+
+Certain parts of the community have been selling bitcoins for unreasonably low prices.
+This has halted Bitcoin's valuation at $20k and even driven the price down below $15k!
+However, clearly Bitcoin is worth much more than that, and there is widespread support for higher prices.
+
+This problem can be fixed by setting a global minimum price for bitcoins.
+Unfortunately, today, the consensus protocol is completely oblivious to the price bitcoins are traded at.
+Therefore, we must first add a field to Bitcoin transactions to indicate their price.
+
+==Specification==
+
+===New field and legal implication===
+
+A new field is added to Bitcoin transactions.
+This field, if present, must represent the honest and true USD/BTC rate used for the transaction.
+By signing the transaction, the sender legally affirms this is the valuation of bitcoins used for the transaction.
+
+For the avoidance of doubt: when the transaction is valued in a currency other than USD, any reasonable exchange rate may be used to come up with the USD valuation.
+
+===Serialisation===
+
+When serialising the transaction for any purpose, including signing, weight calculation, and so on, the output count must be incremented by one.
+Prior to the first real output, the following bytes must be inserted:
+
+* Constant: 00 00 00 00 00 00 00 00
+* A single byte, the size in bytes of the remainder of the inserted data
+* Constant: 6a 04 55 53 44 24
+* A single byte, the size in bytes of the remainder of the inserted data
+* The USD/BTC rate used for the transaction, in standard signed integer serialisation, with all leading zeros removed (except as necessary to preserve the sign bit).
+
+==Backwards compatibility==
+
+===Consensus===
+
+The new price field is serialised as a dummy output, with a value of zero, and a scriptPubKey that begins with OP_RETURN (6a).
+Existing nodes will ignore this dummy output, and the leading OP_RETURN in the scriptPubKey ensures it is never considered spendable.
+
+Therefore, current nodes will ignore the new field entirely, and accept transactions using it.
+
+===Wallets===
+
+Existing wallets do not typically generate price indicators as specified.
+Under this BIP, this absence of the field is perfectly acceptable.
+
+==Reference implementation==
+
+https://github.com/bitcoin/bitcoin/compare/v0.17.1...luke-jr:usd_price_tx_field

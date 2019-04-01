@@ -1,0 +1,44 @@
+<pre>
+  BIP: ?
+  Layer: Consensus (soft fork)
+  Title: $50k USD/BTC Minimum Price
+  Author: Luke Dashjr <luke+bip@dashjr.org>
+  Comments-Summary: No comments yet.
+  Comments-URI: https://github.com/bitcoin/bips/wiki/Comments:BIP-????
+  Status: Draft
+  Type: Standards Track
+  Created: 2019-04-01
+  License: BSD-2-Clause
+  Requires: usdprice
+</pre>
+
+==Abstract==
+
+This BIP defines a minimum price of $50k USD/BTC for Bitcoin transactions.
+
+==Copyright==
+
+This BIP is licensed under the BSD 2-clause license.
+
+==Motivation==
+
+Certain parts of the community have been selling bitcoins for unreasonably low prices.
+This has halted Bitcoin's valuation at $20k and even driven the price down below $15k!
+However, clearly Bitcoin is worth much more than that, and there is widespread support for higher prices.
+
+bip-usdprice defines a new field to indicate the price of transactions.
+Using this, we can softfork to require a minimum transaction price.
+
+==Specification==
+
+Beginning with block height 622370 (expected approximately 2020 April 1), a block is reject as invalid unless all transactions it contains both declare a USD/BTC price (as defined in bip-usdprice) and specify a price that is at a minimum $50k USD/BTC.
+
+==Backwards compatibility==
+
+As a soft fork, older nodes will continue to accept the blockchain without modification.
+Non-upgraded nodes, however, will not validate the minimum price requirement, and may accept invalid blocks if miners choose to make them.
+Since transactions not declaring a price are at this time still common-place, the softfork activation has been set a full year into the future to ensure time to upgrade both nodes and wallet software.
+
+==Reference implementation==
+
+https://github.com/luke-jr/bitcoin/compare/usd_price_tx_field...softfork_50k
