@@ -512,13 +512,13 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Dmitry Petukhov
 | Informational
 | Complete
-|-
+|- style="background-color: #cfffcf"
 | [[bip-0089.mediawiki|89]]
 | Applications
 | Chain Code Delegation
 | Jesse Posner, Jurvis Tan
 | Specification
-| Draft
+| Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0090.mediawiki|90]]
 |
@@ -827,6 +827,20 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Christopher Gilliard
 | Specification
 | Deployed
+|-
+| [[bip-0138.md|138]]
+| Applications
+| Compact Encryption Scheme for Non-seed Wallet Data
+| Pyth
+| Specification
+| Draft
+|-
+| [[bip-0139.md|139]]
+| Applications
+| Wallet Metadata Export Format
+| Pyth
+| Specification
+| Draft
 |- style="background-color: #ffcfcf"
 | [[bip-0140.mediawiki|140]]
 | Consensus (soft fork)
@@ -1150,6 +1164,13 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Specification
 | Draft
 |-
+| [[bip-0332.md|332]]
+| Peer Services
+| Stale Tip Relay
+| Anthony Towns, w0xlt, Ram
+| Specification
+| Draft
+|-
 | [[bip-0337.mediawiki|337]]
 | API/RPC
 | Compressed Transactions
@@ -1240,13 +1261,13 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Pieter Wuille
 | Specification
 | Deployed
-|-
+|- style="background-color: #ffcfcf"
 | [[bip-0351.mediawiki|351]]
 | Applications
 | Private Payments
 | Alfred Hodler, Clark Moody
-| Informational
-| Draft
+| Specification
+| Closed
 |- style="background-color: #ffffcf"
 | [[bip-0352.mediawiki|352]]
 | Applications
@@ -1329,63 +1350,63 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Applications
 | Miniscript
 | Pieter Wuille, Andrew Poelstra, Sanket Kanjalkar, Antoine Poinsot, Ava Chow
-| Informational
+| Specification
 | Draft
 |- style="background-color: #cfffcf"
 | [[bip-0380.mediawiki|380]]
 | Applications
 | Output Script Descriptors General Operation
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0381.mediawiki|381]]
 | Applications
 | Non-Segwit Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0382.mediawiki|382]]
 | Applications
 | Segwit Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0383.mediawiki|383]]
 | Applications
 | Multisig Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0384.mediawiki|384]]
 | Applications
 | combo() Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0385.mediawiki|385]]
 | Applications
 | raw() and addr() Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0386.mediawiki|386]]
 | Applications
 | tr() Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #cfffcf"
 | [[bip-0387.mediawiki|387]]
 | Applications
 | Tapscript Multisig Output Script Descriptors
 | Pieter Wuille, Ava Chow
-| Informational
+| Specification
 | Deployed
 |- style="background-color: #ffffcf"
 | [[bip-0388.mediawiki|388]]
@@ -1399,14 +1420,14 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Applications
 | Multipath Descriptor Key Expressions
 | Ava Chow
-| Informational
+| Specification
 | Draft
 |-
 | [[bip-0390.mediawiki|390]]
 | Applications
 | musig() Descriptor Key Expression
 | Ava Chow
-| Informational
+| Specification
 | Draft
 |- style="background-color: #ffcfcf"
 | [[bip-0391.mediawiki|391]]
@@ -1427,6 +1448,13 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Applications
 | Output Script Descriptor Annotations
 | Craig Raw
+| Specification
+| Draft
+|-
+| [[bip-0394.mediawiki|394]]
+| Applications
+| rawtr() Output Script Descriptors
+| jeanpablojp
 | Specification
 | Draft
 |-
@@ -1511,6 +1539,34 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Applications
 | Dust UTXO Disposal Protocol
 | bubb1es, haris
+| Specification
+| Draft
+|-
+| [[bip-0458.mediawiki|458]]
+| Applications
+| Half-Aggregation of BIP 340 Signatures
+| Tim Ruffing, Jonas Nick, Fabian Jahr
+| Specification
+| Draft
+|-
+| [[bip-0459.mediawiki|459]]
+| Applications
+| DahLIAS fully aggregated signatures for secp256k1
+| Fabian Jahr
+| Specification
+| Draft
+|-
+| [[bip-0460.mediawiki|460]]
+| Consensus (soft fork)
+| CISA for Taproot Key Path Spends in SegWit v2
+| Fabian Jahr
+| Specification
+| Draft
+|-
+| [[bip-0461.md|461]]
+| Applications
+| Deterministic ECDSA Signatures
+| Liam Gilligan
 | Specification
 | Draft
 |}

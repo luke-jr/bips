@@ -16,7 +16,6 @@ from deps.bitcoin_test.psbt import (
     PSBT_IN_OUTPUT_INDEX,
     PSBT_IN_PREVIOUS_TXID,
     PSBT_IN_SIGHASH_TYPE,
-    PSBT_IN_WITNESS_UTXO,
     PSBT_OUT_SCRIPT,
 )
 from deps.dleq import dleq_verify_proof
@@ -24,9 +23,9 @@ from secp256k1lab.secp256k1 import GE
 
 from .bip352_crypto import compute_silent_payment_output_script
 from .inputs import (
+    _script_pubkey_from_psbt_input,
     collect_input_ecdh_and_pubkey,
     is_input_eligible,
-    parse_witness_utxo,
     pubkey_from_eligible_input,
 )
 from .psbt_bip375 import (
@@ -46,6 +45,7 @@ def validate_psbt_structure(psbt: PSBT) -> Tuple[bool, str]:
     Checks:
     - Each output must have PSBT_OUT_SCRIPT or PSBT_OUT_SP_V0_INFO
     - PSBT_OUT_SP_V0_LABEL requires PSBT_OUT_SP_V0_INFO
+    - SP_V0_LABEL must be 4 bytes (32-bit little-endian uint)
     - SP_V0_INFO must be 66 bytes (33-byte scan key + 33-byte spend key)
     - ECDH shares must be 33 bytes
     - DLEQ proofs must be 64 bytes
@@ -72,6 +72,15 @@ def validate_psbt_structure(psbt: PSBT) -> Tuple[bool, str]:
                 False,
                 f"Output {i} has PSBT_OUT_SP_V0_LABEL but missing PSBT_OUT_SP_V0_INFO",
             )
+
+        # Validate SP_V0_LABEL field length
+        if has_sp_label:
+            sp_label = output_map[PSBT_OUT_SP_V0_LABEL]
+            if len(sp_label) != 4:
+                return (
+                    False,
+                    f"Output {i} PSBT_OUT_SP_V0_LABEL has wrong length ({len(sp_label)} bytes, expected 4)",
+                )
 
         # Validate SP_V0_INFO field length
         if has_sp_info:
@@ -223,7 +232,7 @@ def validate_dleq_proof(
 ) -> Tuple[bool, str]:
     """
     Verify a DLEQ proof for silent payments
-    
+
     Checks:
     - ECDH share and DLEQ proof lengths
     - Verify DLEQ proof correctness
@@ -250,6 +259,15 @@ def validate_dleq_proof(
     return True, None
 
 
+def is_segwit_v2_or_later(script_pubkey: bytes) -> bool:
+    """Return whether script_pubkey is a SegWit v2-v16 witness program."""
+    return (
+        4 <= len(script_pubkey) <= 42
+        and 0x52 <= script_pubkey[0] <= 0x60  # OP_2 through OP_16
+        and script_pubkey[1] == len(script_pubkey) - 2
+    )
+
+
 def validate_input_eligibility(psbt: PSBT) -> Tuple[bool, str]:
     """
     Validate input eligibility constraints for silent payments
@@ -265,11 +283,9 @@ def validate_input_eligibility(psbt: PSBT) -> Tuple[bool, str]:
 
     # Check segwit version restrictions
     for i, input_map in enumerate(psbt.i):
-        if PSBT_IN_WITNESS_UTXO in input_map:
-            witness_utxo = input_map[PSBT_IN_WITNESS_UTXO]
-            script = parse_witness_utxo(witness_utxo)
-            if script and 0x51 < script[0] <= 0x60:  # OP_2 or higher (segwit v2+)
-                return False, f"Input {i} uses segwit version > 1 with silent payments"
+        script = _script_pubkey_from_psbt_input(input_map)
+        if script is not None and is_segwit_v2_or_later(script):
+            return False, f"Input {i} uses segwit version > 1 with silent payments"
 
     # Check SIGHASH_ALL requirement - PSBT_IN_SIGHASH_TYPE is optional, but if set it must be SIGHASH_ALL when SP outputs are present
     for i, input_map in enumerate(psbt.i):
@@ -304,15 +320,18 @@ def validate_output_scripts(psbt: PSBT) -> Tuple[bool, str]:
             output_index = struct.unpack("<I", output_index_bytes)[0]
             outpoints.append(COutPoint(txid_int, output_index))
 
+    # Silent payment codes sorted lexicographically, ties broken by output index
+    sp_outputs = [
+        (output_map[PSBT_OUT_SP_V0_INFO], output_idx, output_map)
+        for output_idx, output_map in enumerate(psbt.o)
+        if PSBT_OUT_SP_V0_INFO in output_map
+    ]
+    sp_outputs.sort(key=lambda entry: (entry[0], entry[1]))
+
     # Track k values per scan key
     scan_key_k_values = {}
 
-    # Validate each SP output
-    for output_idx, output_map in enumerate(psbt.o):
-        if PSBT_OUT_SP_V0_INFO not in output_map:
-            continue  # Skip non-SP outputs
-
-        sp_info = output_map[PSBT_OUT_SP_V0_INFO]
+    for sp_info, output_idx, output_map in sp_outputs:
         scan_pubkey_bytes = sp_info[:33]
         spend_pubkey_bytes = sp_info[33:]
 

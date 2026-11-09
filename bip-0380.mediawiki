@@ -5,7 +5,7 @@
   Authors: Pieter Wuille <pieter@wuille.net>
            Ava Chow <me@achow101.com>
   Status: Deployed
-  Type: Informational
+  Type: Specification
   Assigned: 2021-06-27
   License: BSD-2-Clause
 </pre>
@@ -341,4 +341,7 @@ This Table lists all available Script expressions and the BIPs specifying them.
 |-
 | <tt>sp(KEY)</tt>, <tt>sp(KEY, KEY)</tt>
 | [[bip-0392.mediawiki|392]]
+|-
+| <tt>rawtr(KEY)</tt>
+| [[bip-0394.mediawiki|394]]
 |}
