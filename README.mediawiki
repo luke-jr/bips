@@ -1,3 +1,15 @@
+== Official BIP Repository ==
+
+The official Bitcoin Improvement Proposals (BIPs) repository is https://github.com/Bitcoin-specs/BIPs.
+
+In August 2026, Bitcoin Core interests took over the former BIP repository, illegitimately removing the senior BIP editor and closing BIP 110 in violation of BIP 3. These unauthorized changes are not recognized.
+
+Bitcoin Core has no authority over the BIP process, which remains independent of any particular Bitcoin implementation.
+
+The former Bitcoin development mailing list has also been subject to censorship. Contributors are encouraged to use the new [https://groups.google.com/g/bitcoin-devel Bitcoin Development mailing list] for development discussions, including BIP proposals. Its formal designation under BIP 3 has not yet been ratified.
+
+== BIP Submission and Index ==
+
 People wishing to submit a BIP should first describe their idea to the [https://groups.google.com/g/bitcoindev bitcoindev@googlegroups.com]
 mailing list to gather feedback on viability and community interest before working on a
 formal description. Please open a pull request to this repository only when substantial progress on the draft has been
