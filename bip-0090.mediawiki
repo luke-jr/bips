@@ -25,7 +25,7 @@ Please see those [[#references|BIPs]] for more details.
 
 Note that this trigger mechanism is dependent on the chain history.  To validate a block, we must test whether the trigger was met by looking at the previous 1000 blocks in the chain before it, which can be inefficient.
 
-In addition, this mechanism for code deployments have been deprecated in favor of BIP 9 deployments, which offer several advantages (please see [https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki BIP 9]).
+In addition, this mechanism for code deployments have been deprecated in favor of BIP 9 deployments, which offer several advantages (please see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0009.mediawiki BIP 9]).
 
 Thus we propose elimination of the logic implementing these kinds of deployments, by replacing the test which governs enforcement of BIP 34, BIP 65, and BIP 66 with simple height checks, which we choose to be the block height triggering the 95% activation rule on mainnet for each of those deployments.  This simplification of the consensus rules would reduce the technical debt associated with deployment of those consensus changes.
 
@@ -82,13 +82,13 @@ https://github.com/bitcoin/bitcoin/pull/8391.
 
 ==References==
 
-[https://github.com/bitcoin/bips/blob/master/bip-0034.mediawiki BIP34 Block v2, Height in Coinbase]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0034.mediawiki BIP34 Block v2, Height in Coinbase]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0066.mediawiki BIP66 Strict DER signatures]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0066.mediawiki BIP66 Strict DER signatures]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki BIP65 OP_CHECKLOCKTIMEVERIFY]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0065.mediawiki BIP65 OP_CHECKLOCKTIMEVERIFY]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki BIP9 Version bits with timeout and delay]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0009.mediawiki BIP9 Version bits with timeout and delay]
 
 ==Acknowledgements==
 

@@ -399,7 +399,7 @@ backward compatibility of the default settings with BIP9.
 
 [1] http://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xbd_chap04.html#tag_21_04_16
 
-[2] [[https://github.com/bitcoin/bips/blob/master/bip-0009/assignments.mediawiki|List of existing BIP9 deployment proposals]]
+[2] [[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0009/assignments.mediawiki|List of existing BIP9 deployment proposals]]
 
 
 ==Copyright==

@@ -198,26 +198,26 @@ For each output with PSBT_OUT_SP_V0_INFO set, the Signer may generate a proof fo
 
 If the Signer has the private keys for all eligible inputs, the Signer should generate a global ECDH share for each scan key ''B<sub>scan</sub>'' as follows:
 
-Using the notation from [https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#specification BIP352]
+Using the notation from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0352.mediawiki#specification BIP352]
 
 * Let ''a<sub>n</sub>'' be the sum of the private keys ''a'' of all eligible inputs
 * Let ''C =  a<sub>n</sub>·B<sub>scan</sub>''
 
 Set the key as ''B<sub>scan</sub>'' and the value as ''C'' for the PSBT_GLOBAL_SP_ECDH_SHARE field.
 
-Compute the DLEQ proof for ''C'' using [https://github.com/bitcoin/bips/blob/master/bip-0374.mediawiki#dleq-proof-generation BIP374 GenerateProof] and passing ''a<sub>n</sub>'' as ''a'' and ''B<sub>scan</sub>'' as ''B''.
+Compute the DLEQ proof for ''C'' using [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0374.mediawiki#dleq-proof-generation BIP374 GenerateProof] and passing ''a<sub>n</sub>'' as ''a'' and ''B<sub>scan</sub>'' as ''B''.
 Set the key as ''B<sub>scan</sub>'' and the value as the proof for the PSBT_GLOBAL_SP_DLEQ field.
 
 If the Signer has the private keys for some eligible inputs or does not want to create a global ECDH share, the Signer should generate a per-input ECDH share for each scan key ''B<sub>scan</sub>'' as follows:
 
-Using the notation from [https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#specification BIP352], for each eligible input:
+Using the notation from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0352.mediawiki#specification BIP352], for each eligible input:
 
 * Let ''a'' be the private key of the input
 * Let ''C =  a·B<sub>scan</sub>''
 
 Set the key as ''B<sub>scan</sub>'' and the value as ''C'' for the PSBT_IN_SP_ECDH_SHARE field of the input.
 
-Compute the DLEQ proof for ''C'' using [https://github.com/bitcoin/bips/blob/master/bip-0374.mediawiki#dleq-proof-generation BIP374 GenerateProof] and passing ''B<sub>scan</sub>'' as ''B''.
+Compute the DLEQ proof for ''C'' using [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0374.mediawiki#dleq-proof-generation BIP374 GenerateProof] and passing ''B<sub>scan</sub>'' as ''B''.
 Set the key as ''B<sub>scan</sub>'' and the value as the proof for the PSBT_IN_SP_DLEQ field of the input.
 
 ====Verifying the DLEQ Proof====
@@ -228,16 +228,16 @@ If PSBT_GLOBAL_SP_ECDH_SHARE and PSBT_GLOBAL_SP_DLEQ are set, verify as follows:
 
 * Let ''A<sub>n</sub>'' be the sum of the public keys ''A'' of all eligible inputs
 
-Using [https://github.com/bitcoin/bips/blob/master/bip-0374.mediawiki#dleq-proof-verification BIP374 VerifyProof] and passing ''A'' as ''A<sub>n</sub>'', ''B'' as ''B<sub>scan</sub>'', ''C'' as the value of PSBT_GLOBAL_SP_ECDH_SHARE, and ''proof'' as the value of PSBT_GLOBAL_SP_DLEQ.
+Using [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0374.mediawiki#dleq-proof-verification BIP374 VerifyProof] and passing ''A'' as ''A<sub>n</sub>'', ''B'' as ''B<sub>scan</sub>'', ''C'' as the value of PSBT_GLOBAL_SP_ECDH_SHARE, and ''proof'' as the value of PSBT_GLOBAL_SP_DLEQ.
 
 If PSBT_IN_SP_ECDH_SHARE and PSBT_IN_SP_DLEQ are set for a particular input, verify as follows:
 
-Using [https://github.com/bitcoin/bips/blob/master/bip-0374.mediawiki#dleq-proof-verification BIP374 VerifyProof] and passing ''A'' as the public key of the input, ''B'' as ''B<sub>scan</sub>'', ''C'' as the value of PSBT_IN_SP_ECDH_SHARE, and ''proof'' as the value of PSBT_IN_SP_DLEQ.
+Using [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0374.mediawiki#dleq-proof-verification BIP374 VerifyProof] and passing ''A'' as the public key of the input, ''B'' as ''B<sub>scan</sub>'', ''C'' as the value of PSBT_IN_SP_ECDH_SHARE, and ''proof'' as the value of PSBT_IN_SP_DLEQ.
 
 
 ====Computing the Output Scripts====
 
-Compute the PSBT_OUT_SCRIPT using the procedure in [https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#creating-outputs BIP352] but substituting ''a·B<sub>scan</sub>'' with the PSBT_GLOBAL_SP_ECDH_SHARE for that scan key if available, or the sum of all PSBT_IN_SP_ECDH_SHAREs from eligible inputs for that scan key.
+Compute the PSBT_OUT_SCRIPT using the procedure in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0352.mediawiki#creating-outputs BIP352] but substituting ''a·B<sub>scan</sub>'' with the PSBT_GLOBAL_SP_ECDH_SHARE for that scan key if available, or the sum of all PSBT_IN_SP_ECDH_SHAREs from eligible inputs for that scan key.
 If there are multiple silent payment codes with the same scan key, sort the codes lexicographically in ascending order to determine the ordering of the ''k'' value.
 If there are multiple silent payment codes with both the same scan and spend keys, sort the subgroup by output index in ascending order.
 

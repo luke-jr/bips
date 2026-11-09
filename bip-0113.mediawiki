@@ -106,13 +106,13 @@ concerns with existing protocols.
 
 ==References==
 
-[https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki BIP9: Versionbits]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0009.mediawiki BIP9: Versionbits]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki BIP65: OP_CHECKLOCKTIMEVERIFY]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0065.mediawiki BIP65: OP_CHECKLOCKTIMEVERIFY]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki BIP68: Consensus-enforced transaction replacement signaled via sequence numbers]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0068.mediawiki BIP68: Consensus-enforced transaction replacement signaled via sequence numbers]
 
-[https://github.com/bitcoin/bips/blob/master/bip-0112.mediawiki BIP112: CHECKSEQUENCEVERIFY]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0112.mediawiki BIP112: CHECKSEQUENCEVERIFY]
 
 [http://lists.linuxfoundation.org/pipermail/bitcoin-dev/2015-August/010396.html Softfork deployment considerations]
 

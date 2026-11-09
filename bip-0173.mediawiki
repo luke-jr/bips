@@ -29,9 +29,9 @@ This BIP is licensed under the 2-clause BSD license.
 For most of its history, Bitcoin has relied on base58 addresses with a
 truncated double-SHA256 checksum. They were part of the original
 software and their scope was extended in
-[https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki BIP13]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0013.mediawiki BIP13]
 for Pay-to-script-hash
-([https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki P2SH]).
+([https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0016.mediawiki P2SH]).
 However, both the character set and the checksum algorithm have limitations:
 * Base58 needs a lot of space in QR codes, as it cannot use the ''alphanumeric mode''.
 * The mixed case in base58 makes it inconvenient to reliably write down, type on mobile keyboards, or read out loud.
@@ -41,16 +41,16 @@ However, both the character set and the checksum algorithm have limitations:
 
 Included in the Segregated Witness proposal are a new class of outputs
 (witness programs, see
-[https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki BIP141]),
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0141.mediawiki BIP141]),
 and two instances of it ("P2WPKH" and "P2WSH", see
-[https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki BIP143]).
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0143.mediawiki BIP143]).
 Their functionality is available indirectly to older clients by embedding in P2SH
 outputs, but for optimal efficiency and security it is best to use it
 directly. In this document we propose a new address format for native
 witness outputs (current and future versions).
 
 This replaces
-[https://github.com/bitcoin/bips/blob/master/bip-0142.mediawiki BIP142],
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0142.mediawiki BIP142],
 and was previously discussed
 [https://bitcoincore.org/logs/2016-05-zurich-meeting-notes.html#base32 here] (summarized
 [https://bitcoincore.org/en/meetings/2016/05/20/#error-correcting-codes-for-future-address-types here]).
@@ -210,7 +210,7 @@ implementations' assumptions about lengths), but still be visually
 distinct.</ref> for testnet.
 * The data-part values:
 ** 1 character (representing 5 bits of data): the witness version
-** A conversion of the 2-to-40-byte witness program (as defined by [https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki BIP141]) to base32:
+** A conversion of the 2-to-40-byte witness program (as defined by [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0141.mediawiki BIP141]) to base32:
 *** Start with the bits of the witness program, most significant bit per byte first.
 *** Re-arrange those bits into groups of 5, and pad with zeroes at the end if needed.
 *** Translate those bits to characters using the table above.

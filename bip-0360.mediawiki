@@ -341,7 +341,7 @@ We also imagine the possibility of introducing multiple post-quantum signatures 
 
 ==Test Vectors and Reference Code==
 
-Test vector data for creation of P2MR UTXOs can be found [https://github.com/bitcoin/bips/blob/master/bip-0360/ref-impl/common/tests/data/p2mr_construction.json here].
+Test vector data for creation of P2MR UTXOs can be found [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0360/ref-impl/common/tests/data/p2mr_construction.json here].
 
 These test vectors build off of the test vectors for [[bip-0341.mediawiki|BIP 341]] (Taproot). One important distinction is that the P2MR test vectors do not include keypath spend scenarios.
 

@@ -63,7 +63,7 @@ We first present an informal overview of the protocol. In what follows, uppercas
 Bob publishes a public key ''B'' as a silent payment address. Alice discovers Bob's silent payment address, selects a UTXO with private key ''a'', public key ''A'' and creates a destination output ''P'' for Bob in the following manner:
 
 * Let ''P = B + hash(a·B)·G''
-* Encode ''P'' as a [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki BIP341] taproot output
+* Encode ''P'' as a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki BIP341] taproot output
 
 Since ''a·B == b·A'' ([https://en.wikipedia.org/wiki/Elliptic-curve_Diffie%E2%80%93Hellman Elliptic-curve Diffie–Hellman]), Bob scans with his private key ''b'' by collecting the input public keys for each transaction with at least one unspent taproot output and performing the ECDH calculation until ''P'' is found (i.e. calculating ''P = B + hash(b·A)·G'' and seeing that ''P'' is present in the transaction outputs).
 
@@ -142,11 +142,11 @@ We use the following functions and conventions:
 * ser<sub>256</sub>(p): serializes the integer p as a 32-byte sequence, most significant byte first.
 * ser<sub>P</sub>(P): serializes the coordinate pair P = (x,y) as a byte sequence using SEC1's compressed form: (0x02 or 0x03) || ser<sub>256</sub>(x), where the header byte depends on the parity of the omitted Y coordinate.
 
-For everything not defined above, we use the notation from [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki#specification BIP340]. This includes the ''hash<sub>tag</sub>(x)'' notation to refer to ''SHA256(SHA256(tag) || SHA256(tag) || x)''.
+For everything not defined above, we use the notation from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340.mediawiki#specification BIP340]. This includes the ''hash<sub>tag</sub>(x)'' notation to refer to ''SHA256(SHA256(tag) || SHA256(tag) || x)''.
 
 === Versions ===
 
-This document defines version 0 (''sp1q''). Version is communicated through the address in the same way as bech32 addresses (see [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#bech32 BIP173]. Future upgrades to silent payments will require a new version. As much as possible, future upgrades should support receiving from older wallets (e.g. a silent payments v0 wallet can send to both v0 and v1 addresses). Any changes that break compatibility with older silent payment versions should be a new BIP.
+This document defines version 0 (''sp1q''). Version is communicated through the address in the same way as bech32 addresses (see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki#bech32 BIP173]. Future upgrades to silent payments will require a new version. As much as possible, future upgrades should support receiving from older wallets (e.g. a silent payments v0 wallet can send to both v0 and v1 addresses). Any changes that break compatibility with older silent payment versions should be a new BIP.
 
 Future silent payments versions will use the following scheme:
 
@@ -182,7 +182,7 @@ Future silent payments versions will use the following scheme:
 ** ''v0'': check that the data part is exactly 66-bytes. Otherwise, fail
 ** ''v1'' through ''v30'': read the first 66-bytes of the data part and discard the remaining bytes
 ** ''v31'': fail
-* Receiver addresses are always [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki BIP341] taproot outputs<ref name="why_taproot">'''Why only taproot outputs?''' Providing too much optionality for the protocol makes it difficult to implement and can be at odds with the goal of providing the best privacy. Limiting to taproot outputs helps simplify the implementation significantly while also putting users in the best eventual anonymity set.</ref>
+* Receiver addresses are always [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki BIP341] taproot outputs<ref name="why_taproot">'''Why only taproot outputs?''' Providing too much optionality for the protocol makes it difficult to implement and can be at odds with the goal of providing the best privacy. Limiting to taproot outputs helps simplify the implementation significantly while also putting users in the best eventual anonymity set.</ref>
 * The sender should sign with one of the sighash flags ''DEFAULT'', ''ALL'', ''SINGLE'', ''NONE'' (''ANYONECANPAY'' is unsafe). It is strongly recommended implementations use ''SIGHASH_ALL'' (''SIGHASH_DEFAULT'' for taproot inputs) when possible<ref name="why_not_sighash_anyonecanpay">'''Why is it unsafe to use ''SIGHASH_ANYONECANPAY''?''' Since the output address for the receiver is derived from the sum of the [[#inputs-for-shared-secret-derivation|Inputs For Shared Secret Derivation]] public keys, the inputs must not change once the sender has signed the transaction. If the inputs are allowed to change after the fact, the receiver will not be able to calculate the shared secret needed to find and spend the output. It is currently an open question on how a future version of silent payments could be made to work with new sighash flags such as ''SIGHASH_GROUP'' and ''SIGHASH_ANYPREVOUT''.</ref>
 * Inputs used to derive the shared secret are from the ''[[#inputs-for-shared-secret-derivation|Inputs For Shared Secret Derivation]]'' list
 
@@ -203,13 +203,13 @@ A silent payment address is constructed in the following manner:
 * Let ''B<sub>spend</sub>, b<sub>spend</sub> = Receiver's spend public key and corresponding private key''
 * Let ''B<sub>m</sub> = B<sub>spend</sub> + hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))·G'', where ''hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))·G'' is an optional integer tweak for labeling
 ** If no label is applied then ''B<sub>m</sub> = B<sub>spend</sub>''
-* The final address is a [https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki Bech32m] encoding of:
+* The final address is a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0350.mediawiki Bech32m] encoding of:
 ** The human-readable part "sp" for mainnet, "tsp" for testnets (e.g.  signet, testnet)
 ** The data-part values:
 *** The character "q", to represent a silent payment address of version 0
 *** The 66-byte concatenation of the receiver's public keys, ''ser<sub>P</sub>(B<sub>scan</sub>) || ser<sub>P</sub>(B<sub>m</sub>)''
 
-Note: [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki BIP173] imposes a 90 character limit for Bech32 segwit addresses and limits versions to 0 through 16, whereas a silent payment address requires ''at least'' 116 characters<ref name="why_116_chars"> ''' Why do silent payment addresses need at least 116 characters?''' A silent payment address is a bech32m encoding comprised of the following parts:
+Note: [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki BIP173] imposes a 90 character limit for Bech32 segwit addresses and limits versions to 0 through 16, whereas a silent payment address requires ''at least'' 116 characters<ref name="why_116_chars"> ''' Why do silent payment addresses need at least 116 characters?''' A silent payment address is a bech32m encoding comprised of the following parts:
 
 
 * HRP [2-3 characters]
@@ -219,7 +219,7 @@ Note: [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki BIP173] im
 * checksum [6 characters]
 
 
-For a silent payments v0 address, this results in a 116-character address when using the 2-character mainnet HRP ("sp"), or a 117-character address when using the 3-character testnet HRP ("tsp"). Future versions of silent payment addresses may add to the payload, which is why a 1023-character limit is suggested.</ref> and allows versions up to 31. Additionally, since higher versions may add to the data field, it is recommended implementations use a limit of 1023 characters (see [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#checksum-design BIP173: Checksum design] for more details).
+For a silent payments v0 address, this results in a 116-character address when using the 2-character mainnet HRP ("sp"), or a 117-character address when using the 3-character testnet HRP ("tsp"). Future versions of silent payment addresses may add to the payload, which is why a 1023-character limit is suggested.</ref> and allows versions up to 31. Additionally, since higher versions may add to the data field, it is recommended implementations use a limit of 1023 characters (see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki#checksum-design BIP173: Checksum design] for more details).
 
 === Inputs For Shared Secret Derivation ===
 
@@ -232,7 +232,7 @@ While any UTXO with known output scripts can be used to fund the transaction, th
 
 Inputs with conditional branches or multiple public keys (e.g. ''CHECKMULTISIG'') are excluded from shared secret derivation as this introduces malleability and would allow a sender to re-sign with a different set of public keys after the silent payment output has been derived. This is not a concern when the sender controls all of the inputs, but is an issue for CoinJoins and other collaborative protocols, where a malicious participant can participate in deriving the silent payment address with one set of keys and then re-broadcast the transaction with signatures for a different set of public keys. P2TR can have hidden conditional branches (script path), but we work around this by using only the output public key.
 
-For all of the output types listed, only X-only and compressed public keys are permitted<ref name="why_only_compressed_public_keys">''' Why only compressed public keys ''' Uncompressed and hybrid public keys are less common than compressed keys and generally considered to be a bad idea due to their blockspace inefficiency. Additionally, [https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#restrictions-on-public-key-type BIP143] recommends restricting P2WPKH inputs to compressed keys as a default policy.</ref>.
+For all of the output types listed, only X-only and compressed public keys are permitted<ref name="why_only_compressed_public_keys">''' Why only compressed public keys ''' Uncompressed and hybrid public keys are less common than compressed keys and generally considered to be a bad idea due to their blockspace inefficiency. Additionally, [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0143.mediawiki#restrictions-on-public-key-type BIP143] recommends restricting P2WPKH inputs to compressed keys as a default policy.</ref>.
 
 ''' P2TR '''
 
@@ -254,7 +254,7 @@ The sender uses the private key corresponding to the taproot output key (i.e. th
 
 Same as a keypath spend, the sender MUST use the private key corresponding to the taproot output key. If this key is not available, the output cannot be included as an input to the transaction. Same as a keypath spend, the receiver obtains the public key from the ''scriptPubKey'' (i.e. the taproot output key)<ref name="why_always_output_pubkey">''' Why not skip all taproot script path spends? ''' This causes malleability issues for CoinJoins. If the silent payments protocol skipped taproot script path spends, this would allow an attacker to join a CoinJoin round, participate in deriving the silent payment address using the tweaked private key for a key path spend, and then broadcast their own version of the transaction using the script path spend. If the receiver were to only consider key path spends, they would skip the attacker's script path spend input when deriving the shared secret and not be able to find the funds. Additionally, there may be scenarios where the sender can perform ECDH with the key path private key but spends the output using the script path.</ref>.
 
-The one exception is script path spends that use NUMS point ''H'' as their internal key (where ''H'' is constructed by taking the hash of the standard uncompressed encoding of the secp256k1 base point ''G'' as X coordinate, see [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#constructing-and-spending-taproot-outputs BIP341: Constructing and spending Taproot outputs] for more details), in which case the input will be skipped for the purposes of shared secret derivation<ref name="why_ignore_h">'''Why skip outputs with H as the internal taproot key?''' If use cases get popularized where the taproot key path cannot be used, these outputs can still be included without getting in the way of making a silent payment, provided they specifically use H as their internal taproot key.</ref>. The receiver determines whether or not to skip the input by checking in the control block if the taproot internal key is equal to ''H''.
+The one exception is script path spends that use NUMS point ''H'' as their internal key (where ''H'' is constructed by taking the hash of the standard uncompressed encoding of the secp256k1 base point ''G'' as X coordinate, see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki#constructing-and-spending-taproot-outputs BIP341: Constructing and spending Taproot outputs] for more details), in which case the input will be skipped for the purposes of shared secret derivation<ref name="why_ignore_h">'''Why skip outputs with H as the internal taproot key?''' If use cases get popularized where the taproot key path cannot be used, these outputs can still be included without getting in the way of making a silent payment, provided they specifically use H as their internal taproot key.</ref>. The receiver determines whether or not to skip the input by checking in the control block if the taproot internal key is equal to ''H''.
 
 ''' P2WPKH '''
 
@@ -298,7 +298,7 @@ The sending wallet performs coin selection as usual with the following restricti
 After the inputs have been selected, the sender can create one or more outputs for one or more silent payment addresses in the following manner:
 
 * Collect the private keys for each input from the ''[[#inputs-for-shared-secret-derivation|Inputs For Shared Secret Derivation]]'' list
-* For each private key ''a<sub>i</sub>'' corresponding to a [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki BIP341] taproot output, check that the private key produces a point with an even Y coordinate and negate the private key if not<ref name="why_negate_taproot_private_keys">'''Why do taproot private keys need to be checked?''' Recall from [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki BIP340] that each X-only public key has two corresponding private keys, ''d'' and ''n - d''. To maintain parity between sender and receiver, it is necessary to use the private key corresponding to the even Y coordinate when performing the ECDH step since the receiver will assume the even Y coordinate when summing the taproot X-only public keys.</ref>
+* For each private key ''a<sub>i</sub>'' corresponding to a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki BIP341] taproot output, check that the private key produces a point with an even Y coordinate and negate the private key if not<ref name="why_negate_taproot_private_keys">'''Why do taproot private keys need to be checked?''' Recall from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340.mediawiki BIP340] that each X-only public key has two corresponding private keys, ''d'' and ''n - d''. To maintain parity between sender and receiver, it is necessary to use the private key corresponding to the even Y coordinate when performing the ECDH step since the receiver will assume the even Y coordinate when summing the taproot X-only public keys.</ref>
 * Let ''a = a<sub>1</sub> + a<sub>2</sub> + ... + a<sub>n</sub>'', where each ''a<sub>i</sub>'' has been negated if necessary
 ** If ''a = 0'', fail
 * Let ''input_hash = hash<sub>BIP0352/Inputs</sub>(outpoint<sub>L</sub> || A)'', where ''outpoint<sub>L</sub>'' is the smallest ''outpoint'' lexicographically used in the transaction<ref name="why_smallest_outpoint"></ref> and ''A = a·G''
@@ -313,7 +313,7 @@ After the inputs have been selected, the sender can create one or more outputs f
 *** Let ''t<sub>k</sub> = hash<sub>BIP0352/SharedSecret</sub>(ser<sub>P</sub>(ecdh_shared_secret) || ser<sub>32</sub>(k))''
 **** If ''t<sub>k</sub>'' is not a valid scalar, i.e., if ''t<sub>k</sub> = 0'' or ''t<sub>k</sub>'' is larger or equal to the secp256k1 group order, fail
 *** Let ''P<sub>mn</sub> = B<sub>m</sub> + t<sub>k</sub>·G''
-*** Encode ''P<sub>mn</sub>'' as a [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki BIP341] taproot output
+*** Encode ''P<sub>mn</sub>'' as a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki BIP341] taproot output
 *** Optionally, repeat with k++ to create additional outputs for the current ''B<sub>m</sub>''
 *** If no additional outputs are required, continue to the next ''B<sub>m</sub>'' with ''k++''<ref name="why_not_the_same_tn">''' Why not re-use ''t<sub>k</sub>'' when paying different labels to the same receiver?''' If paying the same entity but to two separate labeled addresses in the same transaction without incrementing ''k'', an outside observer could subtract the two output values and observe that this value is the same as the difference between two published silent payment addresses and learn who the recipient is.</ref>
 ** Optionally, if the sending wallet implements receiving silent payments, it can create change outputs by sending to its own silent payment address using label ''m = 0'', following the steps above
@@ -326,12 +326,12 @@ All generated outputs MUST be present in the final transaction. If an output ''P
 
 Two keys are needed to create a silent payments address: the spend key and the scan key. To ensure compatibility, wallets MAY use BIP32 derivation with the following derivation paths for the spend and scan key. When using BIP32 derivation, wallet software MUST use hardened derivation<ref name="bip32_derivation">'''Why use BIP32 hardened derivation?''' Using BIP32 derivation allows users to add silent payments to an existing master seed. It also ensures that a user's silent payment funds are recoverable in any BIP32/BIP43 compatible wallet. Using hardened derivation ensures that it is safe to export the scan private key without exposing the master key or spend private key.</ref> for both the spend and scan key.
 
-A scan and spend key pair using BIP32 derivation are defined (taking inspiration from [https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki BIP44]) in the following manner:
+A scan and spend key pair using BIP32 derivation are defined (taking inspiration from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0044.mediawiki BIP44]) in the following manner:
 
      scan_private_key: m / purpose' / coin_type' / account' / 1' / 0
     spend_private_key: m / purpose' / coin_type' / account' / 0' / 0
 
-<code>purpose</code> is a constant set to ''352'' following the BIP43 recommendation. Refer to [https://github.com/bitcoin/bips/blob/master/bip-0043.mediawiki BIP43] and [https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki BIP44] for more details.
+<code>purpose</code> is a constant set to ''352'' following the BIP43 recommendation. Refer to [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0043.mediawiki BIP43] and [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0044.mediawiki BIP44] for more details.
 
 ==== Scanning ====
 
@@ -367,7 +367,7 @@ If each of the checks in ''[[#scanning-silent-payment-eligible-transactions|Scan
 Recall that a silent payment output is of the form ''B<sub>spend</sub> + t<sub>k</sub>·G + hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))·G'', where ''hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))·G'' is an optional label. To spend a silent payment output:
 
 * Let ''d = (b<sub>spend</sub> + t<sub>k</sub> + hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))) mod n'', where ''hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))'' is the optional label
-* Spend the [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki BIP341] output with the private key ''d''
+* Spend the [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki BIP341] output with the private key ''d''
 
 ==== Backup and Recovery ====
 

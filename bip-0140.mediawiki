@@ -17,7 +17,7 @@ This BIP describes the use of normalized transaction IDs (NTXIDs) in order to el
 
 Transaction malleability refers to the fact that transactions can be modified, either by one of the signers by re-signing the transaction or a third-party by modifying the signature representation. This is a problem since any modification to the serialized representation also changes the hash of the transaction, which is used by spending transaction to reference the funds that are being transferred. If a transaction is modified and later confirmed by ending up in the blockchain all transactions that depended on the original transaction are no longer valid, and thus orphaned.
 
-BIPs 62<ref>[[https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki|BIP 62 - Dealing with malleability]]</ref> and 66<ref>[[https://github.com/bitcoin/bips/blob/master/bip-0066.mediawiki|BIP 66 - Strict DER signatures]]</ref> alleviate the problem of third-party modification by defining a canonical representation of the signatures. However, checking the canonical representation is complex and may not eliminate all sources of third-party malleability. Furthermore, these BIPs do not address modifications by one of the signers, i.e., re-signing the transaction, because signers can produce any number of signatures due to the random parameter in ECDSA.
+BIPs 62<ref>[[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0062.mediawiki|BIP 62 - Dealing with malleability]]</ref> and 66<ref>[[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0066.mediawiki|BIP 66 - Strict DER signatures]]</ref> alleviate the problem of third-party modification by defining a canonical representation of the signatures. However, checking the canonical representation is complex and may not eliminate all sources of third-party malleability. Furthermore, these BIPs do not address modifications by one of the signers, i.e., re-signing the transaction, because signers can produce any number of signatures due to the random parameter in ECDSA.
 
 This proposal eliminates malleability by removing the malleable signatures from the hash used to reference the outputs spent by a transaction. The new hash used to reference an output is called the ''normalized transaction ID''. The integrity of all data that is used to reference the output is guaranteed by the signature itself, and any modification that would change the normalized transaction ID would also invalidate the signature itself.
 
@@ -55,7 +55,7 @@ with matching scriptSig format:
 
     {signature}...{signature}
 
-This is the standard ''m-of-n'' script defined in [https://github.com/bitcoin/bips/blob/master/bip-0011.mediawiki BIP 11] with an additional version parameter <code>v</code> and the new opcode. Singlesig transactions are encoded as ''1-of-1'' transactions.
+This is the standard ''m-of-n'' script defined in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0011.mediawiki BIP 11] with an additional version parameter <code>v</code> and the new opcode. Singlesig transactions are encoded as ''1-of-1'' transactions.
 
 The existing <code>OP_CHECKMULTISIG</code> and <code>OP_CHECKMULTISIGVERIFY</code> have a bug<ref>[[https://bitcoin.org/en/developer-guide#multisig|Developer Documentation - Multisig]]</ref> that pops one argument too many from the stack. This bug is not reproduced in the implementation of OP_CHECKSIGEX, so the canonical solution of pushing a dummy value onto the stack is not necessary.
 
@@ -89,7 +89,7 @@ Using version 2 for transactions is an explicit opt-in to the normalized ID trac
 
 Tracking the normalized transaction IDs in the UTXO requires the storage of an additional hash per transaction whose outputs are not completely spent, which at 7,000,000 transactions with unspent outputs amounts to 224MB additional storage on disk.
 
-The coinbase transactions have been checked for hash-collisions and no collisions were found except for the coinbase transactions in blocks at heights 91842 and 91880, which are known to be identical<ref>[[https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki|BIP 30 - Duplicate transactions]]</ref>, and motivated the introduction of BIP 34.<ref>[[https://github.com/bitcoin/bips/blob/master/bip-0034.mediawiki|Block v2, Height in Coinbase]]</ref> Since coinbase transactions are invalid if transmitted outside of a block it is not possible to modify them on the fly and since they only mature after being included for a long time in the blockchain they are considered safe.
+The coinbase transactions have been checked for hash-collisions and no collisions were found except for the coinbase transactions in blocks at heights 91842 and 91880, which are known to be identical<ref>[[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0030.mediawiki|BIP 30 - Duplicate transactions]]</ref>, and motivated the introduction of BIP 34.<ref>[[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0034.mediawiki|Block v2, Height in Coinbase]]</ref> Since coinbase transactions are invalid if transmitted outside of a block it is not possible to modify them on the fly and since they only mature after being included for a long time in the blockchain they are considered safe.
 
 === OP_CHECKSIGEX ===
 

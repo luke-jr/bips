@@ -209,7 +209,7 @@ The algorithm ''VerifyAggregate(aggsig, pm_aggd<sub>0..u-1</sub>)'' is defined a
 * Fail if ''s⋅G &ne; z<sub>0</sub>⋅(R<sub>0</sub> + e<sub>0</sub>⋅P<sub>0</sub>) + ... + z<sub>u-1</sub>⋅(R<sub>u-1</sub> + e<sub>u-1</sub>⋅P<sub>u-1</sub>)''
 * Return success iff no failure occurred before reaching this point.
 
-The verification algorithm is similar to [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki#batch-verification BIP340 Batch Verification]. As in BIP340, using an [https://bitcoin.stackexchange.com/a/80702/109853 efficient algorithm for computing the sum of multiple EC multiplications] can significantly speed up verification.
+The verification algorithm is similar to [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340.mediawiki#batch-verification BIP340 Batch Verification]. As in BIP340, using an [https://bitcoin.stackexchange.com/a/80702/109853 efficient algorithm for computing the sum of multiple EC multiplications] can significantly speed up verification.
 
 == Backward Compatibility ==
 

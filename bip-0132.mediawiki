@@ -10,7 +10,7 @@
 
 == Abstract ==
 
-The current process for accepting a BIP is not clearly defined. While [https://github.com/bitcoin/bips/blob/master/bip-0001.mediawiki BIP-0001] defines the process for writing and submitting a Bitcoin Improvement Proposal to the community it does not specify the precise method for which BIPs are considered accepted or rejected.
+The current process for accepting a BIP is not clearly defined. While [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0001.mediawiki BIP-0001] defines the process for writing and submitting a Bitcoin Improvement Proposal to the community it does not specify the precise method for which BIPs are considered accepted or rejected.
 
 This proposal sets up a method for determining BIP acceptance.
 

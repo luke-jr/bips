@@ -2,7 +2,7 @@ from .secp256k1 import GE, G
 from .util import int_from_bytes
 
 # The following function is based on the BIP 327 reference implementation
-# https://github.com/bitcoin/bips/blob/master/bip-0327/reference.py
+# https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0327/reference.py
 
 
 # Return the plain public key corresponding to a given secret key

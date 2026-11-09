@@ -76,7 +76,7 @@ The new per-input types are defined as follows:
 | 2
 |}
 
-Per [https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#spending BIP 352 spending] the <tt><32-byte tweak></tt> is ''hash<sub>BIP0352/SharedSecret</sub>(ser<sub>P</sub>(ecdh_shared_secret) || ser<sub>32</sub>(k))''
+Per [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0352.mediawiki#spending BIP 352 spending] the <tt><32-byte tweak></tt> is ''hash<sub>BIP0352/SharedSecret</sub>(ser<sub>P</sub>(ecdh_shared_secret) || ser<sub>32</sub>(k))''
 
 or ''hash<sub>BIP0352/SharedSecret</sub>(ser<sub>P</sub>(ecdh_shared_secret) || ser<sub>32</sub>(k)) + hash<sub>BIP0352/Label</sub>(ser<sub>256</sub>(b<sub>scan</sub>) || ser<sub>32</sub>(m))'',
 

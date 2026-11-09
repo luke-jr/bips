@@ -139,8 +139,8 @@ to pizza place at <nowiki>http://pizza.example.com/pop/laszlo111</nowiki> using 
 
 == References ==
 
-[https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki BIP0021]: URI Scheme
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0021.mediawiki BIP0021]: URI Scheme
 
-[https://github.com/bitcoin/bips/blob/master/bip-0120.mediawiki BIP0120]: Proof of Payment
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0120.mediawiki BIP0120]: Proof of Payment
 
 [https://www.ietf.org/rfc/rfc3986.txt RFC3986]: Uniform Resource Identifier (URI): Generic Syntax

@@ -10,7 +10,7 @@ import secrets
 
 #
 # The following helper functions were copied from the BIP-340 reference implementation:
-# https://github.com/bitcoin/bips/blob/master/bip-0340/reference.py
+# https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340/reference.py
 #
 
 p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F

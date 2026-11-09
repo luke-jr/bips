@@ -17,9 +17,9 @@ This BIP describes a method to deterministically generate multi-signature pay-to
 
 ==Motivation==
 
-Pay-to-script-hash (BIP-0011<ref>[https://github.com/bitcoin/bips/blob/master/bip-0011.mediawiki BIP-0011]</ref>) is a transaction type that allows funding of arbitrary scripts, where the recipient carries the cost of fee's associated with using longer, more complex scripts.
+Pay-to-script-hash (BIP-0011<ref>[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0011.mediawiki BIP-0011]</ref>) is a transaction type that allows funding of arbitrary scripts, where the recipient carries the cost of fee's associated with using longer, more complex scripts.
 
-Multi-signature pay-to-script-hash transactions are defined in BIP-0016<ref>[https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki BIP-0016]</ref>. The redeem script does not require a particular ordering or encoding for public keys.  This means that for a given set of keys and number of required signatures, there are as many as 2(n!) possible standard redeem scripts, each with its separate P2SH address.  Adhering to an ordering and key encoding would ensure that a multi-signature “account” (set of public keys and required signature count) has a canonical P2SH address.
+Multi-signature pay-to-script-hash transactions are defined in BIP-0016<ref>[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0016.mediawiki BIP-0016]</ref>. The redeem script does not require a particular ordering or encoding for public keys.  This means that for a given set of keys and number of required signatures, there are as many as 2(n!) possible standard redeem scripts, each with its separate P2SH address.  Adhering to an ordering and key encoding would ensure that a multi-signature “account” (set of public keys and required signature count) has a canonical P2SH address.
 
 By adopting a sorting and encoding standard, compliant wallets will always produce the same P2SH address for the same given set of keys and required signature count, making it easier to recognize transactions involving that multi-signature account.  This is particularly attractive for multisignature hierarchical-deterministic wallets, as less state is required to setup multi-signature accounts:  only the number of required signatures and master public keys of participants need to be shared, and all wallets will generate the same addresses.
 
@@ -120,7 +120,7 @@ Vector 4: (from bitcore)
 The authors wish to thank BtcDrak and Luke-Jr for their involvement & contributions in the early discussions of this BIP.
 
 ==Usage & Implementations==
-* [[https://github.com/bitcoin/bips/blob/master/bip-0045.mediawiki#address-generation-procedure|BIP-0045]] - Structure for Deterministic P2SH Multisignature Wallets
+* [[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0045.mediawiki#address-generation-procedure|BIP-0045]] - Structure for Deterministic P2SH Multisignature Wallets
 * [[https://github.com/bitpay/bitcore/blob/50a868cb8cdf2be04bb1c5bf4bcc064cc06f5888/lib/script/script.js#L541|Bitcore]]
 * [[https://github.com/haskoin/haskoin-core/blob/b41b1deb0989334a7ead6fc993fb8b02f0c00810/haskoin-core/Network/Haskoin/Script/Parser.hs#L112-L122|Haskoin]] - Bitcoin implementation in Haskell
 * [[https://github.com/etotheipi/BitcoinArmory/blob/268db0f3fa20c989057bd43343a43b2edbe89aeb/armoryengine/ArmoryUtils.py#L1441|Armory]]

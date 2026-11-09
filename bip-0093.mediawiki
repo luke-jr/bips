@@ -16,7 +16,7 @@
 ===Abstract===
 
 This document proposes a checksummed base32 format, "codex32", and a standard for backing up and restoring the master seed of a
-[https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP-0032] hierarchical deterministic wallet using it.
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0032.mediawiki BIP-0032] hierarchical deterministic wallet using it.
 It includes an encoding format, a BCH error-correcting checksum, and optional Shamir's secret sharing algorithms for share generation and secret recovery.
 Secret data can be encoded directly, or split into up to 31 shares.
 A minimum threshold of shares, which can be between 2 and 9, is needed to recover the secret, whereas without sufficient shares, no information about the secret is recoverable.
@@ -53,7 +53,7 @@ The ability to compute properties by hand comes from our choice of a small field
 It does not come with any reduction in security, as long as users use high-quality randomness.
 Note that hand computation is optional, the particular details of hand computation are outside the scope of this standard, and implementers do not need to be concerned with this possibility.
 
-[https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki BIP-0039] serves the same purpose as this standard: encoding master seeds for storage by users.
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0039.mediawiki BIP-0039] serves the same purpose as this standard: encoding master seeds for storage by users.
 However, BIP-0039 has no error-correcting ability, cannot sensibly be extended to support secret sharing, has no support for versioning or other metadata, and has many technical design decisions that make implementation and interoperability difficult (for example, the use of SHA-512 to derive seeds, or the use of 11-bit words).
 
 ==Specification==
@@ -64,7 +64,7 @@ efficient to read out loud, write, type or to put into QR codes.</ref> format ca
 
 ===codex32===
 
-A codex32 string is similar to a bech32 string defined in [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki BIP-0173].
+A codex32 string is similar to a bech32 string defined in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki BIP-0173].
 It reuses the base-32 character set from BIP-0173, and consists of:
 
 * A human-readable part, which is the string "ms" (or "MS").

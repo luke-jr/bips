@@ -368,13 +368,13 @@ Thanks to Eric Lombrozo and Anthony Towns for contributing example use cases.
 
 ==References==
 
-[https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki BIP 9] Versionbits
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0009.mediawiki BIP 9] Versionbits
 
-[https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki BIP 68] Relative lock-time through consensus-enforced sequence numbers
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0068.mediawiki BIP 68] Relative lock-time through consensus-enforced sequence numbers
 
-[https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki BIP 65] OP_CHECKLOCKTIMEVERIFY
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0065.mediawiki BIP 65] OP_CHECKLOCKTIMEVERIFY
 
-[https://github.com/bitcoin/bips/blob/master/bip-0113.mediawiki BIP 113] Median past block time for time-lock constraints
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0113.mediawiki BIP 113] Median past block time for time-lock constraints
 
 [http://lists.linuxfoundation.org/pipermail/lightning-dev/2015-July/000021.html HTLCs using OP_CHECKSEQUENCEVERIFY/OP_LOCKTIMEVERIFY and revocation hashes]
 
