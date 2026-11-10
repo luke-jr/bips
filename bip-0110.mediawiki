@@ -3,6 +3,7 @@
   Layer: Consensus (soft fork)
   Title: Reduced Data Temporary Softfork
   Authors: Dathon Ohm <dathonohm+bip@proton.me>
+           Chris Guida <chrisguida+bips@gmail.com>
   Status: Complete
   Type: Specification
   Assigned: 2025-12-03
