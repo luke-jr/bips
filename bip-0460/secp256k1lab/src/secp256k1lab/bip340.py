@@ -1,5 +1,5 @@
 # The following functions are based on the BIP 340 reference implementation:
-# https://github.com/bitcoin/bips/blob/master/bip-0340/reference.py
+# https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340/reference.py
 
 from .secp256k1 import FE, GE, G
 from .util import int_from_bytes, bytes_from_int, xor_bytes, tagged_hash

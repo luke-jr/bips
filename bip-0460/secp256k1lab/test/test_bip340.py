@@ -20,7 +20,7 @@ class BIP340Tests(unittest.TestCase):
 
     def test_vectors(self):
         # Test against vectors from the BIPs repository
-        # [https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv]
+        # [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340/test-vectors.csv]
         vectors_file = Path(__file__).parent / "vectors" / "bip340.csv"
         with open(vectors_file, encoding='utf8') as csvfile:
             reader = csv.DictReader(csvfile)

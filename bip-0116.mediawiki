@@ -124,22 +124,22 @@ Old clients will consider the OP_MERKLEBRANCHVERIFY as a NOP and ignore it. Proo
 
 ==References==
 
-[1] [https://github.com/bitcoin/bips/blob/master/bip-0098.mediawiki BIP98: Fast Merkle Trees (Consensus layer)]
+[1] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0098.mediawiki BIP98: Fast Merkle Trees (Consensus layer)]
 
-[2] [https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki BIP16: Pay to Script Hash]
+[2] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0016.mediawiki BIP16: Pay to Script Hash]
 
-[3] [https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki BIP141: Segregated Witness (Consensus layer)]
+[3] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0141.mediawiki BIP141: Segregated Witness (Consensus layer)]
 
 [4] [https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-2459 National Vulnerability Database: CVE-2012-2459]
 
-[5] [https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki BIP65: OP_CHECKLOCKTIMEVERIFY]
+[5] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0065.mediawiki BIP65: OP_CHECKLOCKTIMEVERIFY]
 
-[6] [https://github.com/bitcoin/bips/blob/master/bip-0112.mediawiki BIP112: CHECKSEQUENCEVERIFY]
+[6] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0112.mediawiki BIP112: CHECKSEQUENCEVERIFY]
 
-[7] [https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki BIP143: Transaction Signature Verification for Version 0 Witness Program]
+[7] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0143.mediawiki BIP143: Transaction Signature Verification for Version 0 Witness Program]
 
 [8] [https://blockstream.com/2015/08/24/treesignatures.html Multisig on steroids using tree signatures]
 
-[9] [https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki BIP68: Relative lock-time using consensus-enforced sequence numbers]
+[9] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0068.mediawiki BIP68: Relative lock-time using consensus-enforced sequence numbers]
 
-[10] [https://github.com/bitcoin/bips/blob/master/bip-0008.mediawiki BIP8: Version bits with lock-in by height]
+[10] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0008.mediawiki BIP8: Version bits with lock-in by height]

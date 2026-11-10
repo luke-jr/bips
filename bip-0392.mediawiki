@@ -36,7 +36,7 @@ Two new key expression types are defined for use with <tt>sp()</tt> descriptors:
 ====<tt>spscan</tt>====
 
 The <tt>spscan</tt> key expression encodes the scan private key and spend public key.
-It is a [https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki Bech32m] encoding of:
+It is a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0350.mediawiki Bech32m] encoding of:
 * The human-readable part "spscan" for mainnet, "tspscan" for testnets
 * The data-part values:
 ** The character "q", to represent silent payments version 0
@@ -45,7 +45,7 @@ It is a [https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki Bech32m]
 ====<tt>spspend</tt>====
 
 The <tt>spspend</tt> key expression encodes both the scan and spend private keys.
-It is a [https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki Bech32m] encoding of:
+It is a [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0350.mediawiki Bech32m] encoding of:
 * The human-readable part "spspend" for mainnet, "tspspend" for testnets
 * The data-part values:
 ** The character "q", to represent silent payments version 0

@@ -59,7 +59,7 @@ Several new data structures are introduced to the P2P protocol first, to aid wit
 Short IDs are computed as follows:
 * Let ''salt<sub>1</sub>'' and ''salt<sub>2</sub>'' be the entropy contributed by both sides; see the "sendtxrcncl" message further for details how they are exchanged.
 * Sort the two salts such that ''salt<sub>1</sub> &le; salt<sub>2</sub>'' (which side sent what doesn't matter).
-* Compute ''h = TaggedHash("Tx Relay Salting", salt<sub>1</sub>, salt<sub>2</sub>)'', where the two salts are encoded in 64-bit little-endian byte order, and TaggedHash is specified by [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki BIP-340].
+* Compute ''h = TaggedHash("Tx Relay Salting", salt<sub>1</sub>, salt<sub>2</sub>)'', where the two salts are encoded in 64-bit little-endian byte order, and TaggedHash is specified by [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340.mediawiki BIP-340].
 * Let ''k<sub>0</sub>'' be the 64-bit integer obtained by interpreting the first 8 bytes of ''h'' in little-endian byte order.
 * Let ''k<sub>1</sub>'' be the 64-bit integer obtained by interpreting the second 8 bytes of ''h'' in little-endian byte order.
 * Let ''s = SipHash-2-4((k<sub>0</sub>,k<sub>1</sub>),wtxid)'', where ''wtxid'' is the transaction hash including witness data as defined by BIP141.
@@ -109,7 +109,7 @@ The [https://github.com/sipa/minisketch/ minisketch] library implements the cons
 
 Set reconciliation primarily consists of the transmission and decoding of a reconciliation set sketch upon request.
 
-Since sketches are based on the WTXIDs, the negotiation and support of Erlay should be enabled only if both peers signal [https://github.com/bitcoin/bips/blob/master/bip-0339.mediawiki BIP-339] support.
+Since sketches are based on the WTXIDs, the negotiation and support of Erlay should be enabled only if both peers signal [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0339.mediawiki BIP-339] support.
 
 [[File:bip-0330/recon_scheme_merged.png|framed|center|Protocol flow]]
 

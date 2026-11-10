@@ -46,7 +46,7 @@ Note that the existence of this proposal is also improving the privacy of partie
 
 === Relation to BIP79 (Bustapay) ===
 
-Another implementation proposal has been written: [[https://github.com/bitcoin/bips/blob/master/bip-0079.mediawiki|BIP79 Bustapay]].
+Another implementation proposal has been written: [[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0079.mediawiki|BIP79 Bustapay]].
 
 We decided to deviate from it for several reasons:
 * It was not using PSBT, so if the receiver wanted to bump the fee, they would need the full UTXO set.

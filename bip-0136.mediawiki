@@ -68,7 +68,7 @@ Therefore, implementers must be careful not to display '''TxRef'''s to users pre
 
 === TxRef Format ===
 
-'''TxRef''' MUST use the '''Bech32m'''<ref>'''Why use Bech32 Encoding for Confirmed Transaction References?''' The error detection and correction properties of this encoding format make it very attractive. We expect that it will be reasonable for software to correct a maximum of two characters; however, we haven’t specified this yet.</ref> encoding as defined in [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki BIP-0173] and later refined in [https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki BIP-0350]. The Bech32m encoding consists of:
+'''TxRef''' MUST use the '''Bech32m'''<ref>'''Why use Bech32 Encoding for Confirmed Transaction References?''' The error detection and correction properties of this encoding format make it very attractive. We expect that it will be reasonable for software to correct a maximum of two characters; however, we haven’t specified this yet.</ref> encoding as defined in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki BIP-0173] and later refined in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0350.mediawiki BIP-0350]. The Bech32m encoding consists of:
 
 ==== Human-Readable Part ====
 

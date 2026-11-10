@@ -303,4 +303,4 @@ This BIP on its own does not cause any backwards incompatibility.
 
 [3] [http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf Secure Hash Standard]
 
-[4] [https://github.com/bitcoin/bips/blob/master/bip-0116.mediawiki BIP 116 MERKLEBRANCHVERIFY]
+[4] [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0116.mediawiki BIP 116 MERKLEBRANCHVERIFY]

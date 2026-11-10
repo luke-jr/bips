@@ -19,7 +19,7 @@
 This BIP proposes two new tapscript opcodes that add consensus support for a specialized
 covenant: <code>OP_VAULT</code> and <code>OP_VAULT_RECOVER</code>. These opcodes, in conjunction with
 <code>OP_CHECKTEMPLATEVERIFY</code>
-([https://github.com/bitcoin/bips/blob/master/bip-0119.mediawiki BIP-0119]),
+([https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0119.mediawiki BIP-0119]),
 allow users to enforce a delay period before designated coins may be spent to
 an arbitrary destination, with the exception of a prespecified "recovery" path.
 At any time prior to final withdrawal, the coins can be spent to the
@@ -112,8 +112,8 @@ Unfortunately, this approach has a number of practical shortcomings:
 * the vault creation ceremony must be performed each time a new balance is to be deposited.
 
 The deployment of a "precomputed" covenant mechanism like
-[https://github.com/bitcoin/bips/blob/master/bip-0119.mediawiki OP_CHECKTEMPLATEVERIFY] or
-[https://github.com/bitcoin/bips/blob/master/bip-0118.mediawiki SIGHASH_ANYPREVOUT]
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0119.mediawiki OP_CHECKTEMPLATEVERIFY] or
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0118.mediawiki SIGHASH_ANYPREVOUT]
 would both remove the necessity to use an ephemeral key, since the
 covenant is enforced on-chain, and lessen the burden of sensitive data storage,
 since the necessary transactions can be generated from a set of compact
@@ -159,7 +159,7 @@ This proposal is designed to be compatible with any future sighash modes (e.g. <
 == Design ==
 
 In typical usage, a vault is created by encumbering coins under a
-taptree [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki (BIP-341)]
+taptree [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki (BIP-341)]
 containing at least two leaves: one with an <code>OP_VAULT</code>-containing script that
 facilitates the expected withdrawal process, and another leaf with
 <code>OP_VAULT_RECOVER</code> which ensures the coins can be recovered
@@ -270,7 +270,7 @@ where
 
 After the stack is parsed, the following validation checks are performed:
 
-* Decrement the per-script sigops budget (see [https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki#resource-limits BIP-0342]) by 60<ref>'''Why is the sigops cost for OP_VAULT set to 60?''' To determine the validity of a trigger output, OP_VAULT must perform an EC multiplication and hashing proportional to the length of the control block in order to generate the output's expected TapTweak. This has been measured to have a cost in the worst case (max length control block) of roughly twice a Schnorr verification. Because the hashing cost could be mitigated by caching midstate, the cost is 60 and not 100.</ref>; if the budget is brought below zero, script execution MUST fail and terminate immediately.
+* Decrement the per-script sigops budget (see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0342.mediawiki#resource-limits BIP-0342]) by 60<ref>'''Why is the sigops cost for OP_VAULT set to 60?''' To determine the validity of a trigger output, OP_VAULT must perform an EC multiplication and hashing proportional to the length of the control block in order to generate the output's expected TapTweak. This has been measured to have a cost in the worst case (max length control block) of roughly twice a Schnorr verification. Because the hashing cost could be mitigated by caching midstate, the cost is 60 and not 100.</ref>; if the budget is brought below zero, script execution MUST fail and terminate immediately.
 * Let the output designated by <code><trigger-vout-idx></code> be called ''triggerOut''.
 * If the scriptPubKey of ''triggerOut'' is not a version 1 witness program, script execution MUST fail and terminate immediately.
 * Let the script constructed by taking the <code><leaf-update-script-body></code> and prefixing it with minimally-encoded data pushes of the <code><push-count></code> leaf-update script data items be called the ''leaf-update-script''.
@@ -307,7 +307,7 @@ where
 After the stack is parsed, the following validation checks are performed:
 
 * Let the output at index <code><recovery-vout-idx></code> be called ''recoveryOut''.
-* Compute the scriptPubKey tagged hash for ''recoveryOut'' as <code>output-sPK-hash = tagged_hash("VaultRecoverySPK", CompactSize(len(recoveryOut.scriptPubKey)) || recoveryOut.scriptPubKey)</code>, where <code>tagged_hash()</code> is from the [https://github.com/bitcoin/bips/blob/master/bip-0340/reference.py BIP-0340 reference code].
+* Compute the scriptPubKey tagged hash for ''recoveryOut'' as <code>output-sPK-hash = tagged_hash("VaultRecoverySPK", CompactSize(len(recoveryOut.scriptPubKey)) || recoveryOut.scriptPubKey)</code>, where <code>tagged_hash()</code> is from the [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340/reference.py BIP-0340 reference code].
 * If the ''recoveryOut'' <code>output-sPK-hash</code> is not equal to <code><recovery-sPK-hash></code>, script execution MUST fail and terminate immediately.
 ** Implementation recommendation: if ''recoveryOut'' does not have an <code>nValue</code> greater than or equal to this input's amount, the script SHOULD fail and terminate immediately.
 * Queue a deferred check that ensures the <code>nValue</code> of ''recoveryOut'' contains the entire <code>nValue</code> of this input.<ref>'''How do recovery transactions pay for fees?''' If the recovery is unauthorized, fees are attached either via CPFP with an ephemeral anchor or as inputs which are solely spent to fees (i.e. no change output). If the recovery is authorized, fees can be attached in any manner, e.g. unrelated inputs and outputs or CPFP via anchor.</ref>
@@ -376,7 +376,7 @@ corresponding trigger or recovery outputs while preserving their entire input va
 In order to prevent possible pinning attacks, recovery transactions must be replaceable.
 
 * When validating an <code>OP_VAULT_RECOVER</code> input being spent, the script MUST fail (by policy, not consensus) and terminate immediately if both<ref>'''Why are recovery transactions required to be replaceable?''' In the case of unauthorized recoveries, an attacker may attempt to pin recovery transactions by broadcasting a "rebundled" version with a low fee rate. Vault owners must be able to overcome this with replacement. In the case of authorized recovery, if an attacker steals the recovery authorization key, the attacker may try to pin the recovery transaction during theft. Requiring replaceability ensures that the owner can always raise the fee rate of the recovery transaction, even if they are RBF rule #3 griefed in the process.</ref>
-*# the input is not marked as opt-in replaceable by having an nSequence number less than <code>0xffffffff - 1</code>, per [https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki BIP-0125], and
+*# the input is not marked as opt-in replaceable by having an nSequence number less than <code>0xffffffff - 1</code>, per [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0125.mediawiki BIP-0125], and
 *# the version of the recovery transaction has an nVersion other than 3.
 
 If the script containing <code>OP_VAULT_RECOVER</code> is 34 bytes or less<ref>34 bytes is the length of a recovery script that consists solely of <code><recovery-sPK-hash> OP_VAULT_RECOVER</code>.</ref>, let
@@ -659,8 +659,8 @@ and block validation.
 
 Backwards compatibility considerations are very comparable to previous
 deployments for OP_CHECKSEQUENCEVERIFY and OP_CHECKLOCKTIMEVERIFY (see
-[https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki BIP-0065] and
-[https://github.com/bitcoin/bips/blob/master/bip-0112.mediawiki BIP-0112]).
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0065.mediawiki BIP-0065] and
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0112.mediawiki BIP-0112]).
 
 
 == Rationale ==

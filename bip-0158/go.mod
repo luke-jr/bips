@@ -1,4 +1,4 @@
-module github.com/bitcoin/bips/bip-0158
+module github.com/Bitcoin-specs/BIPs/bip-0158
 
 require (
 	github.com/btcsuite/btcd v0.0.0-20190115013929-ed77733ec07d

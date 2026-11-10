@@ -26,12 +26,12 @@ This document is licensed under the 2-clause BSD license.
 
 === Motivation ===
 
-[https://github.com/bitcoin/bips/blob/master/bip-0352.mediawiki#specification BIP352] requires senders to compute output scripts using ECDH shared secrets from the same secret keys used to sign the inputs. Generating an incorrect signature will produce an invalid transaction that will be rejected by consensus. An incorrectly generated output script can still be consensus-valid, meaning funds may be lost if it gets broadcast.
+[https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0352.mediawiki#specification BIP352] requires senders to compute output scripts using ECDH shared secrets from the same secret keys used to sign the inputs. Generating an incorrect signature will produce an invalid transaction that will be rejected by consensus. An incorrectly generated output script can still be consensus-valid, meaning funds may be lost if it gets broadcast.
 By producing a DLEQ proof for the generated ECDH shared secrets, the signing entity can prove to other entities that the output scripts have been generated correctly without revealing the private keys.
 
 == Specification ==
 
-All conventions and notations are used as defined in [https://github.com/bitcoin/bips/blob/master/bip-0327.mediawiki#notation BIP327].
+All conventions and notations are used as defined in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0327.mediawiki#notation BIP327].
 
 === Description ===
 
@@ -63,7 +63,7 @@ The following generates a proof that the result of ''a⋅B'' and the result of '
 Input:
 * The secret key ''a'': a 256-bit unsigned integer
 * The public key ''B'': a point on the curve
-* Auxiliary random data ''r'': a 32-byte array<ref name="why_include_auxiliary_random_data"> ''' Why include auxiliary random data?''' The auxiliary random data should be set to fresh randomness for each proof. The same rationale and recommendations from [https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki#default-signing BIP340] should be applied.</ref> 
+* Auxiliary random data ''r'': a 32-byte array<ref name="why_include_auxiliary_random_data"> ''' Why include auxiliary random data?''' The auxiliary random data should be set to fresh randomness for each proof. The same rationale and recommendations from [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0340.mediawiki#default-signing BIP340] should be applied.</ref> 
 * The generator point ''G'': a point on the curve<ref name="why_include_G"> ''' Why include the generator point G as an input?''' While all other BIPs have used the generator point from secp256k1, passing it as an input here lets this algorithm be used for other generators on secp256k1.</ref>
 * An optional message ''m'': a 32-byte array<ref name="why_include_a_message"> ''' Why include a message as an input?''' This could be useful for protocols that want to authorize on a compound statement, not just knowledge of a scalar. This allows the protocol to combine knowledge of the scalar and the statement.</ref>
 
@@ -115,7 +115,7 @@ This proposal is compatible with all older clients.
 
 == Test Vectors and Reference Code ==
 
-A reference python implementation is included [https://github.com/bitcoin/bips/blob/master/bip-0374/reference.py here].
+A reference python implementation is included [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0374/reference.py here].
 It uses a vendored copy of the [https://github.com/secp256k1lab/secp256k1lab/ secp256k1lab] library at version 1.0.0
 (commit [https://github.com/secp256k1lab/secp256k1lab/commit/44dc4bd893b8f03e621585e3bf255253e0e0fbfb
 44dc4bd893b8f03e621585e3bf255253e0e0fbfb]).

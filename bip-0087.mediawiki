@@ -21,7 +21,7 @@ This BIP is licensed under the 2-clause BSD license.
 
 ==Motivation==
 
-With the increase of more user friendly (offline) multisignature wallets, and adoption of new technologies such as [https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md the descriptor language] and [https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki BIP-0174 (Partially Signed Bitcoin Transactions)], it is necessary to create a common derivation scheme that makes use of all new technologies.
+With the increase of more user friendly (offline) multisignature wallets, and adoption of new technologies such as [https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md the descriptor language] and [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0174.mediawiki BIP-0174 (Partially Signed Bitcoin Transactions)], it is necessary to create a common derivation scheme that makes use of all new technologies.
 
 As background, BIP 44/49/84 specifies:
 
@@ -38,7 +38,7 @@ A modern standardization is needed for multisig derivation paths.  There are som
 m / purpose' / cosigner_index / change / address_index
 </pre>
 
-BIP45 unnecessarily demands a single script type (here, P2SH).  In addition, BIP45 sets <code>cosigner_index</code> in order to sort the <code>purpose'</code> public keys of each cosigner.  This too is redundant, as descriptors can set the order of the public keys with <code>multi</code> or have them sorted lexicographically (as described in [https://github.com/bitcoin/bips/blob/master/bip-0067.mediawiki BIP67]) with <code>sortedmulti</code>.  Sorting public keys between cosigners in order to create the full derivation path, prior to sending the key record to the coordinator to create the descriptor, merely adds additional unnecessary communication rounds.
+BIP45 unnecessarily demands a single script type (here, P2SH).  In addition, BIP45 sets <code>cosigner_index</code> in order to sort the <code>purpose'</code> public keys of each cosigner.  This too is redundant, as descriptors can set the order of the public keys with <code>multi</code> or have them sorted lexicographically (as described in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0067.mediawiki BIP67]) with <code>sortedmulti</code>.  Sorting public keys between cosigners in order to create the full derivation path, prior to sending the key record to the coordinator to create the descriptor, merely adds additional unnecessary communication rounds.
 
 The second multisignature "standard" in use is m/48', which specifies:
 
@@ -122,7 +122,7 @@ Public derivation is used at this level.
 
 The multisig descriptors or descriptor template that is generated from the cosigners' combined key records should be used to generate and discover addresses.
 
-Please see [https://github.com/bitcoin/bips/blob/master/bip-0129.mediawiki BIP-0129 (Bitcoin Secure Multisig Setup)] for an introduction on descriptor templates.
+Please see [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0129.mediawiki BIP-0129 (Bitcoin Secure Multisig Setup)] for an introduction on descriptor templates.
 The descriptor or descriptor template should contain the key origin information for maximum compatibility with BIP-0174.
 
 For example:
@@ -263,10 +263,10 @@ Special thanks to SomberNight, Craig Raw, David Harding, Jochen Hoenicke, Sjors 
 
 Original mailing list thread: https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2021-March/018630.html
 
-* [https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki BIP-0032 (Hierarchical Deterministic Wallets)]
-* [https://github.com/bitcoin/bips/blob/master/bip-0043.mediawiki BIP-0043 (Purpose Field for Deterministic Wallets)]
-* [https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki BIP-0044 (Multi-Account Hierarchy for Deterministic Wallets)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0032.mediawiki BIP-0032 (Hierarchical Deterministic Wallets)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0043.mediawiki BIP-0043 (Purpose Field for Deterministic Wallets)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0044.mediawiki BIP-0044 (Multi-Account Hierarchy for Deterministic Wallets)]
 * [https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md Output Descriptors]
-* [https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki BIP-0174 (Partially Signed Bitcoin Transaction Format)]
-* [https://github.com/bitcoin/bips/blob/master/bip-0067.mediawiki BIP-0067 (Deterministic Pay-to-script-hash multi-signature addresses through public key sorting)]
-* [https://github.com/bitcoin/bips/blob/master/bip-0129.mediawiki BIP-0129 (Bitcoin Secure Multisig Setup)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0174.mediawiki BIP-0174 (Partially Signed Bitcoin Transaction Format)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0067.mediawiki BIP-0067 (Deterministic Pay-to-script-hash multi-signature addresses through public key sorting)]
+* [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0129.mediawiki BIP-0129 (Bitcoin Secure Multisig Setup)]

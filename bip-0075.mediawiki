@@ -319,7 +319,7 @@ For the following we assume the Sender already knows the Receiver's public key, 
 * If NOT including certificate, set '''pki_type''' to "none"
 * If including certificate:
 ** Set '''pki_type''' to "x509+sha256"
-** Set '''pki_data''' as it would be set in BIP-0070 ([https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki#Certificates Certificates])
+** Set '''pki_data''' as it would be set in BIP-0070 ([https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0070.mediawiki#Certificates Certificates])
 ** Sign [[#invoicerequest|InvoiceRequest]] with signature = "" using the X509 Certificate's private key
 ** Set '''signature''' value to the computed signature
 

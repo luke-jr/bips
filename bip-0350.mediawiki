@@ -35,7 +35,7 @@ We first specify the new checksum algorithm, and then document how it should be 
 
 ===Bech32m===
 
-Bech32m modifies the checksum of the Bech32 specification, replacing the constant ''1'' that is xored into the checksum at the end with ''0x2bc830a3''. The resulting checksum verification and creation algorithm (in Python, cf. the code in [https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki#Bech32|BIP173 Bech32 section]):
+Bech32m modifies the checksum of the Bech32 specification, replacing the constant ''1'' that is xored into the checksum at the end with ''0x2bc830a3''. The resulting checksum verification and creation algorithm (in Python, cf. the code in [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0173.mediawiki#Bech32|BIP173 Bech32 section]):
 
 <pre>
 BECH32M_CONST = 0x2bc830a3
@@ -148,7 +148,7 @@ On the other hand, the Bech32m proposal breaks forward-compatibility for sending
 
 ==Test vectors==
 
-'''Implementation advice''' Experiments testing BIP173 implementations found that many wallets and services did not support sending to higher version segregated witness outputs. In anticipation of the proposed [https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki Taproot] soft fork introducing v1 segregated witness outputs on the network, we emphatically recommend employing the complete set of test vectors provided below as well as ensuring that your implementation supports sending to v1 '''and higher versions'''. All higher versions of native segregated witness outputs should be recognized as valid recipients. As higher versions are not defined on the network, no wallet should ever create them and no recipient should ever provide them to a sender. Nor should a recipient ever want to falsely provide them as the recipient would simply see a payment intended to themselves burned instead. However, by defining higher versions as valid recipients now, future soft forks introducing higher versions of native segwit outputs will be forward-compatible to all wallets correctly implementing the Bech32m specification.
+'''Implementation advice''' Experiments testing BIP173 implementations found that many wallets and services did not support sending to higher version segregated witness outputs. In anticipation of the proposed [https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki Taproot] soft fork introducing v1 segregated witness outputs on the network, we emphatically recommend employing the complete set of test vectors provided below as well as ensuring that your implementation supports sending to v1 '''and higher versions'''. All higher versions of native segregated witness outputs should be recognized as valid recipients. As higher versions are not defined on the network, no wallet should ever create them and no recipient should ever provide them to a sender. Nor should a recipient ever want to falsely provide them as the recipient would simply see a payment intended to themselves burned instead. However, by defining higher versions as valid recipients now, future soft forks introducing higher versions of native segwit outputs will be forward-compatible to all wallets correctly implementing the Bech32m specification.
 
 ===Test vectors for Bech32m===
 

@@ -126,7 +126,7 @@ Note that the background on ECDSA signatures was taken from en.bitcoin.it and co
 
 ==References==
 
-[1] - https://github.com/bitcoin/bips/blob/master/bip-0322.mediawiki
+[1] - https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0322.mediawiki
 
 [2] - https://github.com/bitcoin/bitcoin/issues/10542
 

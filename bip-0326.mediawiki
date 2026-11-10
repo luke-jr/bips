@@ -102,7 +102,7 @@ This BIP is licensed under the Creative Commons CC0 1.0 Universal licence.
 
 == References ==
 
-[1] https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+[1] https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0341.mediawiki
 
 [2] https://github.com/bitcoin/bitcoin/pull/2340
 
@@ -112,7 +112,7 @@ https://github.com/spesmilo/electrum/blob/7e6d65ec11c0dccfc24478471c5951d3ae5869
 [4]
 https://txstats.com/dashboard/db/blocks-statistics?panelId=4&fullscreen&orgId=1
 
-[5] https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki
+[5] https://github.com/Bitcoin-specs/BIPs/blob/master/bip-0068.mediawiki
 
 [6]
 https://lists.linuxfoundation.org/pipermail/lightning-dev/2020-January/002412.html
