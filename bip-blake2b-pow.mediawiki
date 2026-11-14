@@ -1,0 +1,1126 @@
+<pre>
+  BIP: ?
+  Layer: Consensus (hard fork)
+  Title: BLAKE2b Proof of Work (Consensus layer)
+  Authors: Luke Dashjr <luke+bip@dashjr.org>
+  Status: Draft
+  Type: Specification
+  Assigned: ?
+  License: BSD-2-Clause
+</pre>
+
+== Abstract ==
+
+This document specifies an upgrade that changes Bitcoin's proof-of-work algorithm from SHA256d to BLAKE2b.
+
+The new proof of work uses a new block header format, which also incorporates fixes for several long-standing protocol limitations that could not be corrected without changing the block header.
+It commits to the block height and transaction count, provides additional mining nonce space, permits timestamp rolling without revealing the real block time to hashing hardware, and provides a dedicated merge-mining commitment.
+
+== Copyright ==
+
+This document is licensed under the 2-clause BSD license.
+
+== Motivation ==
+
+BIP 110 documents the background and rationale for its temporary consensus rules.
+That material is incorporated by reference and is not repeated here.
+<ref name="bip110">[[bip-0110.mediawiki|BIP 110: Reduced Data Temporary Softfork]]</ref>
+
+When BIP 110's mandatory-signalling rules took effect at block 961,632 on 2026-08-08, nearly all then-existing SHA256d miners deliberately produced blocks that violated those consensus rules.
+Those blocks were invalid Bitcoin blocks.
+By extending the invalid blocks instead of Bitcoin's valid chain, the miners attempted a hostile hard fork.
+Because it lacked consensus, the attempt failed to change Bitcoin's rules and instead produced a separate chain:
+the data-storage altcoin referred to here as "Spamcoin".
+
+Spamcoin's operators and supporters subsequently began a coordinated propaganda and social-engineering campaign--a psyop--to convince users that their invalid chain was Bitcoin and that the valid Bitcoin chain had instead forked away.
+
+Bitcoin produced blocks 961,632 and 961,633 but then nearly stalled.
+Block production at the time implied a remaining Bitcoin hash rate near 0.15% of the pre-split total.
+At that rate, reaching the next 2,016-block difficulty adjustment would have taken approximately 25 years.
+The chain retained a SHA256d difficulty of approximately 127.48 trillion despite having only a small fraction of the hash rate that established it.
+
+Continuing with SHA256d would leave Bitcoin dependent on the return of miners who had already chosen to mine Spamcoin's invalid chain.
+It would also leave those miners able to redirect their ASICs back to Bitcoin and overwhelm the remaining chain at will.
+
+SHA256d proof of work has also suffered algorithmic breaks.
+ASICBoost showed that specialized hardware can avoid a substantial part of the computation that SHA256d proof of work is meant to require, by exploiting the structure of SHA256d and the block header.
+Such a shortcut, once discovered, rewards whoever controls it rather than whoever performs the most honest work.
+Multiple parties are actively investing significant research and development in further breaking SHA256d proof of work, with credible hope of success.
+ASICBoost proves the concept.
+<ref name="asicboost">[https://arxiv.org/abs/1604.00575 Timo Hanke: AsicBoost - A Speedup for Bitcoin Mining]</ref>
+
+This specification changes Bitcoin's proof of work to BLAKE2b.
+Existing SHA256d ASICs cannot mine the new proof of work, allowing a new miner set to restore chain progress and security.
+
+Since the proof-of-work recovery already requires every node to upgrade, this specification also addresses long-standing header and mining-protocol problems that were previously impractical to fix:
+
+* the transaction count is committed to properly address CVE-2017-12842<ref>[https://bitcoinops.org/en/topics/merkle-tree-vulnerabilities/ Bitcoin Optech: Merkle tree vulnerabilities and CVE-2017-12842]</ref>;
+* hashing hardware can roll timestamps without learning the real block time;
+* additional nonces reduce dependence on rebuilding other commitments;
+* pools can prevent block withholding attacks;
+* different hashing-hardware interfaces can use explicit input profiles;
+* merge-mining commitments can be placed close to proof of work; and
+* the activation block verifiably restores an association between block height and real-world time.
+
+== Specification ==
+
+=== Definitions and notation ===
+
+<code>TaggedHash(tag, message)</code> is the tagged SHA256 construction defined by BIP 340.
+<ref>[[bip-0340.mediawiki|BIP 340: Schnorr Signatures for secp256k1]]</ref>
+The tags in this document are case-sensitive ASCII strings.
+
+In this document, <code>BLAKE2b(message)</code> means unkeyed BLAKE2b with a 256-bit digest.
+
+Except where this document explicitly gives an integer interpretation, fields and intermediate values are exact bit strings, which have no endianness.
+Integer fields used as hashing inputs are encoded as unsigned little-endian integers of the field's bit length.
+
+<code>zeroes(n)</code> means an <code>n</code>-bit string containing only zero bits.
+Concatenation is written using <code>||</code>.
+
+A block identifier is the 256-bit string whose bytes appear, in order, in the block's conventional hexadecimal form.
+
+=== Deployment parameters ===
+
+A deployment of this specification defines:
+
+* <code>activation_height</code>;
+* <code>activation_headline</code>, an exact byte string; and
+* <code>activation_target_shift</code>, the one-time target multiplier exponent applied at the activation block.
+
+At heights below <code>activation_height</code>, blocks use the historical header and SHA256d proof of work.
+
+At <code>activation_height</code> and every height thereafter, blocks MUST use the version 2 header and BLAKE2b proof of work specified below.
+
+==== Mainnet parameters ====
+
+Mainnet uses:
+
+<pre>
+activation_height       = 961640
+activation_headline     = "8-30 NYPost Deride And Conquer"
+activation_target_shift = 22
+</pre>
+
+The mainnet headline is the 30-byte ASCII encoding of the quoted text, without quotes or terminator.
+
+The final SHA256d block, at height 961,639, had compact target <code>0x1702353d</code>.
+The resulting activation block target is compact <code>0x1a008d4f</code>, a difficulty of about 130 P expected hashes.
+
+==== Testnet4 parameters ====
+
+Testnet4 uses:
+
+<pre>
+activation_height       = 150308
+activation_headline     = ""  # no headline requirement
+activation_target_shift = undefined
+</pre>
+
+The activation block was mined more than 20 minutes after its parent, so testnet4's minimum-difficulty rule gave it the proof-of-work limit, compact <code>0x1d00ffff</code>, a difficulty of about 4.3 G expected hashes.
+The activation target adjustment applies only to the activation block, so no value of <code>activation_target_shift</code> can affect testnet4, and none is defined.
+In practice, testnet4 behaves as if it were 0:
+later blocks take their targets from earlier blocks, so they inherit the unshifted SHA256d target of the first block in the retarget period, as both the minimum-difficulty rule and the BIP 94 retarget look there.
+
+=== Version field ===
+
+Bit 31 of the 32-bit block version selects the version 2 header format.
+This bit is part of the version field and is committed by the proof of work.
+
+At heights below <code>activation_height</code>, bit 31 MUST be clear.
+At and after <code>activation_height</code>, bit 31 MUST be set.
+
+Versions <code>0x80000000</code> through <code>0x80000003</code> are invalid (see the [[#invalid-low-versions|corresponding lesson learned]]).
+
+Version bits signalling, including mandatory signalling, uses top bits (bits 31 through 29) of <code>101</code> instead of <code>001</code> for version 2 blocks.
+
+=== Version 2 block header fields ===
+
+When version bit 31 is set, the block header consists of the fields below.
+This section defines their widths and meanings, not their order, offsets, or padding in the serialized header;
+the [[bip-blake2b-servicebit.mediawiki|peer-services specification]] defines that serialization.
+
+The historical header fields remain, with the nonce extended:
+
+{| class="wikitable"
+! Bit length
+! Field
+! Meaning
+|-
+| 32 || Version
+| Block version; bit 31 is set (see [[#Version_field|Version field]])
+|-
+| 256 || Previous block
+| Identifier of the previous block
+|-
+| 256 || Merkle root
+| Root of the merkle tree of the block's transactions
+|-
+| 32 || Timestamp
+| Unsigned integer; see [[#Block_time|Block time]]
+|-
+| 32 || Target (<code>nBits</code>)
+| Proof-of-work target, in Bitcoin's compact format
+|-
+| 96 || Nonce
+| Mining nonce, extended from 32 bits
+|}
+
+The following existing block data is now also part of the header:
+
+{| class="wikitable"
+! Bit length
+! Field
+! Meaning
+|-
+| 31 || Height
+| Height of this block
+|-
+| 16 || Transaction count
+| Number of transactions in the block
+|-
+| 128 || Extranonce
+| Extra nonce space, previously placed in the coinbase; input to the first BLAKE2b pass
+|}
+
+The following fields are new:
+
+{| class="wikitable"
+! Bit length
+! Field
+! Meaning
+|-
+| 1 || Time-offset enable bit
+| Enable the time offset when determining block time
+|-
+| 32 || Time offset
+| Unsigned integer; see [[#Block_time|Block time]]
+|-
+| 2 || Hashing-hardware profile selector
+| Selects the hashing-hardware profile
+|-
+| 3 || Reserved bits
+| Reserved for future use; SHOULD be zero, but do not affect validity, and validators MUST NOT assume they are zero
+|-
+| 8 || XOR-mask clear-bit count
+| Integer from 0 through 255
+|-
+| 128 || XOR key
+| Pool-selected key
+|-
+| 256 || Merge-mining right-hand side
+| Undefined
+|}
+
+The nonce and the extranonce are inputs to different BLAKE2b passes.
+The nonce is input only to the final BLAKE2b pass, so varying it requires no other recomputation.
+The extranonce is input to the [[#First_BLAKE2b_pass|first BLAKE2b pass]], so varying it changes the intermediate digest supplied to hashing hardware.
+
+A further protocol upgrade will need to extend the block time before it exceeds 2<sup>32</sup> - 1, in AD 2106;
+the [[#Header_commitment_1|reserved time-extension field]] allows a 40-bit block time to be committed without changing the layout.
+One will likewise need to change the height serialization before block height 2<sup>31</sup>, which, projecting forward from the present height at the ten-minute target spacing, would be reached around AD 42,838.
+
+=== Block time ===
+
+If the time-offset enable bit is clear, the block time used by all other consensus rules is the timestamp.
+
+If the time-offset enable bit is set, the block time used by all other consensus rules is:
+
+<pre>
+(timestamp + time_offset) modulo 2**32
+</pre>
+
+The sum wraps, so the time offset does not extend the block-time range beyond AD 2106.
+
+This definition applies to median-time-past, future-time, difficulty, locktime, and every other consensus rule that uses the block time.
+
+The time-offset field is intended for timestamp rolling by hashing hardware.
+
+=== Additional validity rules ===
+
+For every version 2 block:
+
+# The committed height MUST equal the actual block height.
+# The proof-of-work digest MUST be computed as specified below and satisfy the target field.
+
+Existing compact-target range, timestamp, transaction-validity, and block-weight rules continue to apply except as explicitly modified by this specification.
+A version 2 block weighs 336 weight units more than a historical block with the same transactions;
+this specification does not increase the block-weight limit, nor introduce a special header discount.
+
+=== Proof-of-work overview ===
+
+In summary, the proof-of-work digest is computed as follows;
+the sections below define each step, including the encoding of each input:
+
+<pre>
+xor_key_hash = TaggedHash("Bitcoin block hash PoW XOR key", xor_key)
+
+commitment_1 = TaggedHash("Bitcoin block header 1",
+                   version || previous_block || height || merkle_root ||
+                   timestamp || zeroes(8) || target ||
+                   transaction_count || zeroes(16) || packed_bits ||
+                   clear_bit_count || xor_key_hash)
+
+hook         = TaggedHash("Merge-mining hook",
+                   commitment_1 || zeroes(256) || mm_rhs)
+
+intermediate = BLAKE2b(zeroes(32) || hook || extranonce)
+
+final        = BLAKE2b(profile_input(intermediate, hook, nonce, time_offset,
+                                     previous_block))
+
+pow_digest   = final XOR mask(xor_key, clear_bit_count)
+</pre>
+
+where <code>packed_bits</code> holds the profile selector, time-offset enable bit, and reserved bits as defined under [[#Header_commitment_1|Header commitment 1]];
+<code>profile_input</code> arranges its arguments according to the selected [[#Hashing-hardware_interface|hashing-hardware profile]];
+and <code>mask</code> is the [[#Final_XOR_mask_and_proof-of-work_value|XOR mask]].
+
+=== Proof-of-work commitments ===
+
+Each field below is encoded as specified under [[#Definitions_and_notation|Definitions and notation]].
+
+==== XOR-key hash ====
+
+The XOR-key hash is:
+
+<pre>
+TaggedHash("Bitcoin block hash PoW XOR key", 128-bit XOR key)
+</pre>
+
+==== Header commitment 1 ====
+
+The input to the tagged hash is the concatenation of these rows in order:
+
+{| class="wikitable"
+! Bit length
+! Input
+! Transformation
+|-
+| 32 || Version
+| Little-endian, including bit 31
+|-
+| 256 || Previous block
+| The previous block's identifier, in its natural byte order
+|-
+| 32 || Height
+| 32-bit little-endian, whose most significant bit is reserved and zero
+|-
+| 256 || Merkle root
+| Bit string
+|-
+| 32 || Timestamp
+| Little-endian
+|-
+| 8 || Reserved time-extension field
+| Zero
+|-
+| 32 || Target
+| Compact target, encoded as in the historical header
+|-
+| 16 || Transaction count
+| Little-endian
+|-
+| 16 || Reserved transaction-count extension field
+| Zero
+|-
+| 8 || Profile selector, time-offset enable bit, and reserved bits
+| From least significant: profile selector in bits 0-1, time-offset enable bit in bit 2, reserved bits in bits 3-5, and zero in bits 6-7
+|-
+| 8 || XOR-mask clear-bit count
+| Integer
+|-
+| 256 || XOR-key hash
+| Tagged-hash output defined above
+|}
+
+The concatenation is 952 bits (119 bytes).
+Header commitment 1 is:
+
+<pre>
+TaggedHash("Bitcoin block header 1", concatenated_input)
+</pre>
+
+The zero bits following the timestamp allow a possible future 40-bit block time to be committed without changing this layout.
+They do not currently extend the block-time range.
+
+Likewise, the reserved transaction-count extension field allows a possible future expansion of the committed transaction count.
+
+==== Merge-mining hook ====
+
+The "right-hand side" is the header's 256-bit merge-mining field, named for its position to the right of header commitment 1 and the zero padding in the hook input.
+The field is intended for Bitcoin's future expansion beyond a single blockchain;
+this specification leaves its contents undefined.
+
+The input to the tagged hash is:
+
+{| class="wikitable"
+! Bit length
+! Input
+|-
+| 256
+| Header commitment 1
+|-
+| 256
+| Zero
+|-
+| 256
+| Merge-mining right-hand-side bits from the header
+|}
+
+The merge-mining hook is:
+
+<pre>
+TaggedHash("Merge-mining hook", concatenated_input)
+</pre>
+
+The hook ties the merge-mining right-hand side to header commitment 1.
+
+==== First BLAKE2b pass ====
+
+The first BLAKE2b input is:
+
+{| class="wikitable"
+! Bit length
+! Input
+|-
+| 32
+| Zero
+|-
+| 256
+| Merge-mining hook
+|-
+| 128
+| Extranonce
+|}
+
+Hash the 416-bit (52-byte) concatenation with BLAKE2b.
+Its 256-bit output is the intermediate digest.
+
+=== Hashing-hardware interface ===
+
+Hashing hardware receives a profile-specific final-pass input.
+It does not receive the timestamp, target, time-offset enable bit, real block time, nor the unhashed previous-block field.
+
+Hashing hardware chooses the time offset, advancing it as real time elapses, and returns it with its result.
+Because the time-offset enable bit and timestamp are hidden in header commitment 1, hashing hardware cannot determine whether the time offset is applied, nor derive the real block time.
+
+The hashing-hardware profile selector selects one of the following layouts.
+The final BLAKE2b pass hashes the selected layout;
+its 256-bit output is the final BLAKE2b digest.
+In profiles 0, 2, and 3 the time offset is placed between the first 64 bits and the last 32 bits of the nonce.
+
+==== Profile 0 ====
+
+Profile 0 is intended for compatibility with [[#Existing_BLAKE2b_mining_hardware|existing BLAKE2b mining hardware]].
+
+It uses a hidden previous-block value:
+
+<pre>
+TaggedHash("Bitcoin prevblock header, hashed", previous block identifier)
+</pre>
+
+with its first 48 bits then replaced with zeroes.
+
+{| class="wikitable"
+! Bit offset
+! Bit length
+! Input
+|-
+| 0 || 256 || Hidden previous-block value
+|-
+| 256 || 64 || First 64 bits of the nonce
+|-
+| 320 || 32 || Time offset
+|-
+| 352 || 32 || Last 32 bits of the nonce
+|-
+| 384 || 256 || Intermediate digest
+|}
+
+The total input length is 640 bits (80 bytes).
+
+==== Profile 1 ====
+
+Profile 1 is a layout native to Bitcoin, intended for new hardware.
+
+{| class="wikitable"
+! Bit offset
+! Bit length
+! Input
+|-
+| 0 || 96 || Nonce
+|-
+| 96 || 32 || Time offset
+|-
+| 128 || 256 || Intermediate digest
+|-
+| 384 || 256 || Merge-mining hook
+|}
+
+The total input length is 640 bits (80 bytes).
+
+==== Profile 2 ====
+
+{| class="wikitable"
+! Bit offset
+! Bit length
+! Input
+|-
+| 0 || 384 || Zero
+|-
+| 384 || 256 || Merge-mining hook
+|-
+| 640 || 64 || First 64 bits of the nonce
+|-
+| 704 || 32 || Time offset
+|-
+| 736 || 32 || Last 32 bits of the nonce
+|-
+| 768 || 256 || Intermediate digest
+|}
+
+The total input length is 1,024 bits (128 bytes).
+
+==== Profile 3 ====
+
+{| class="wikitable"
+! Bit offset
+! Bit length
+! Input
+|-
+| 0 || 640 || Zero
+|-
+| 640 || 256 || Merge-mining hook
+|-
+| 896 || 64 || First 64 bits of the nonce
+|-
+| 960 || 32 || Time offset
+|-
+| 992 || 32 || Last 32 bits of the nonce
+|-
+| 1024 || 256 || Intermediate digest
+|}
+
+The total input length is 1,280 bits (160 bytes).
+
+=== Final XOR mask and proof-of-work value ===
+
+If every bit of the 128-bit XOR key is zero, the XOR mask is 256 zero bits.
+
+Otherwise, the initial XOR mask is:
+
+<pre>
+TaggedHash("Bitcoin block hash PoW XOR mask", 128-bit XOR key)
+</pre>
+
+Clear the requested number of bits from the start of the mask.
+Bits are counted from the most significant bit of the first byte, then toward the least significant bit, and then through subsequent bytes.
+
+The 256-bit proof-of-work digest is the bitwise XOR of the final BLAKE2b digest and the mask.
+
+All inputs and intermediate values up to this point are bit strings.
+Only now is a value interpreted as a number:
+interpret the proof-of-work digest as a 256-bit big-endian unsigned integer and compare it with the target represented by the compact target field.
+
+The block satisfies proof of work when that integer is less than or equal to the target.
+The conventional hexadecimal block identifier is the proof-of-work digest written in byte order, without reversal.
+
+=== Activation target adjustment ===
+
+Without an adjustment, the first BLAKE2b block, at <code>activation_height</code>, would carry over the target from SHA256d mining, which is [[#Why_adjust_the_target_at_activation|not a measure of BLAKE2b work]].
+That block alone instead uses a starting target for BLAKE2b mining, derived by scaling that target by a deployment-specific factor of 2<sup>activation_target_shift</sup>.
+
+First calculate <code>sha256d_target</code>, the target the activation block would have under the SHA256d difficulty rules.
+
+Decode that compact target to an integer, multiply it by 2<sup>activation_target_shift</sup>, and cap the result at the network proof-of-work limit:
+
+<pre>
+activation_target =
+    min(proof_of_work_limit,
+        sha256d_target * 2**activation_target_shift)
+</pre>
+
+Re-encode the result using Bitcoin's compact target format.
+This is not merely serialization:
+the compact format truncates low-order bits the result may have, and the truncated value is the activation block's target.
+
+This additional adjustment is applied exactly once, at <code>activation_height</code>.
+Later blocks use the ordinary difficulty rules without another algorithm-change adjustment.
+
+The first ordinary retarget after activation measures the timespan of a period that began before activation.
+If SHA256d block production slowed before activation, as it did on mainnet, that timespan is long, and the retarget makes the target easier, by up to the ordinary factor-of-four limit, regardless of how quickly blocks are found after activation.
+This is expected, and no special rule applies to it.
+
+=== Activation headline ===
+
+At <code>activation_height</code>, the coinbase MUST contain <code>activation_headline</code> as a contiguous sequence of bytes, at any position.
+The rule applies only to the activation block.
+
+The required byte sequence MUST match exactly;
+encoding and whitespace are part of the requirement.
+
+== Rationale ==
+
+'''Why does this upgrade change so much besides the proof-of-work algorithm?'''
+
+The block header had to change in any case.
+Existing BLAKE2b mining hardware cannot take the historical 80-byte header as input:
+it expects a different input layout, with a larger nonce in a different position.
+The historical 32-bit nonce was also too small for modern hardware regardless.
+
+The other version 2 header features address long-standing problems and limitations.
+They were not newly discovered while designing this specification;
+they are included now because changing them required changing the block header, which this upgrade had to do anyway.
+
+'''How does this specification keep mining from re-centralizing?'''
+
+Replacing the proof of work recovers Bitcoin from SHA256d mining centralization, and the replacement itself, along with several other elements of this specification, also discourages the new miner set from re-centralizing.
+These elements are directed specifically at keeping mining permissionless and competitive, and are collected here;
+each is detailed in its own answer below.
+
+* '''Precedent.'''<!--
+--> This upgrade establishes that centralized mining can result in a proof-of-work change that strands the centralized hardware.<!--
+--> That precedent is itself a strong disincentive against re-centralizing.
+* '''Open hardware competition.'''<!--
+--> BLAKE2b already has ASICs from [[#Existing_BLAKE2b_mining_hardware|several independent manufacturers]], so no first manufacturer starts with a monopoly head start, and no interim window exists for botnet dominance.<!--
+--> BLAKE2b is also simple and cheap to implement in hardware:<!--
+--> its small add-rotate-xor core can be laid out by any competent ASIC team, so new manufacturers can enter without the accumulated proprietary know-how of the SHA256d incumbents.
+* '''Resistance to algorithmic breaks.'''<!--
+--> No optimization shortcut analogous to overt or covert ASICBoost is known for BLAKE2b, and one is unlikely to exist:<!--
+--> ASICBoost exploits SHA256's message expansion, whereas BLAKE2b has none, using every message word directly in every round.<!--
+--> Such a shortcut raises the barrier to entry not only through patents or trade secrets, but also through the added complexity a new manufacturer must implement to compete.
+* '''No advance knowledge.''' The algorithm was chosen by a [[#Selection_lottery|public deterministic lottery]] over a short list of viable candidates, so nobody could prepare specialized hardware before the result was public and start with a decisive fleet advantage.
+* '''Header fixes.''' Since the header had to be reorganized anyway, several long-standing issues with it were fixed at the same time, including:
+** '''Technical defence against block withholding.'''<!--
+--> Previously, pools could defend against block withholding only through incentives and by identifying their customers (KYC).<!--
+--> The XOR-key mechanism makes a complete technical defence possible.<!--
+--> Pools therefore do not need customer identification to retain recourse against saboteurs;<!--
+--> pooling stays open, competitive, and jurisdiction-independent instead of consolidating into a few permissioned providers.
+** '''Hashing hardware isolated from Bitcoin internals.'''<!--
+--> The 96-bit nonce gives hashing hardware ample search space, and the 128-bit extranonce does the same for the software that feeds it.<!--
+--> The historical 32-bit nonce was too small, so mining protocols were forced to bring the coinbase transaction and merkle tree into scope for mining hardware.<!--
+--> Hardware often handled those Bitcoin internals incorrectly:<!--
+--> some could not handle larger coinbase transactions, which interferes with paying miners directly from the coinbase, and transferring them wasted bandwidth.
+* '''Vendor-independent hardware lifetime.''' Hiding real time from hashing hardware (the hidden timestamp and hidden previous-block value) prevents an ASIC vendor from building reliable expiry "time bombs" into its products, which would let an incumbent vendor force refleeting on its own schedule and undermine second-hand markets that keep small miners viable.
+
+'''Why not keep SHA256d?'''
+
+SHA256d was unsuitable for the recovery because the hostile miner set already controlled an overwhelming amount of specialized SHA256d hardware.
+It has also suffered algorithmic breaks such as ASICBoost.
+
+'''Why BLAKE2b?'''
+
+BLAKE2b was selected from a short list of viable candidates by the process described under [[#Algorithm_selection|Algorithm selection]].
+
+BLAKE2b is a mature, extensively analyzed hash function with high performance on ordinary 64-bit CPUs (for easy verification by nodes), widely available implementations, and a simple unkeyed interface suitable for the required proof-of-work construction.
+
+Its add-rotate-xor core also lends itself to compact, straightforward ASIC implementations, lowering the barrier for new hardware manufacturers.
+No shortcut comparable to ASICBoost is known for BLAKE2b;
+SHA256d's ASICBoost demonstrated how such a shortcut, once discovered, can distort and concentrate hardware manufacturing.
+
+<span id="Existing_BLAKE2b_mining_hardware"></span> '''What BLAKE2b mining hardware already exists?'''
+
+Mining hardware for BLAKE2b already existed before activation, from eight independent manufacturers:
+
+* Baikal Giant B
+* Bitmain Antminer A3
+* Goldshell HS series
+* Goldshell KD5 Pro (official BLAKE2b support); not all other KD-series machines are compatible, but some use the same chip and can be adapted with modified firmware
+* Goldshell SC series
+* Halong Mining DragonMint B52
+* iBeLink BM-S series
+* Innosilicon S11 SiaMaster
+* Obelisk SC1 series
+* StrongU STU-U2
+
+Profile 0 is designed to be compatible with this hardware.
+
+'''Why commit to the transaction count?'''
+
+The transaction-count commitment properly addresses CVE-2017-12842, in which a pair of internal merkle-tree nodes and a 64-byte transaction could be mistaken for each other.
+The merkle root by itself does not commit unambiguously to the number of leaves, so a malformed block body can share a header with a valid body that has a different transaction count.
+Existing implementations work around the ambiguity, for example by treating some blocks containing 64-byte transactions as mutated, but then cannot cache such blocks as invalid, and must revalidate them each time they are seen.
+Committing the count gives those bodies different headers, so an invalid body can be cached as invalid without risk of poisoning the cache against a valid one.
+
+'''Are 16 bits enough for the transaction count?'''
+
+The 16-bit committed transaction count can represent at most 65,535 transactions.
+Under the general 4,000,000-weight-unit block limit, a version 2 block cannot contain more than 16,663 transactions even if every non-coinbase transaction has the minimum 60-byte stripped serialization.
+Witness data can only reduce that transaction count.
+The 16-bit width therefore does not constrain the general maximum, nor any lower block-weight limit imposed by other rules.
+
+'''Why add a time offset?'''
+
+The 96-bit nonce gives hashing hardware ample search space without the timestamp.
+The time offset lets hardware that keeps working on the same input advance the block time as real time passes, so block timestamps stay accurate.
+Doing so does not require knowing the real block time.
+
+'''Why hide the timestamp from hashing hardware?'''
+
+The timestamp is hidden inside header commitment 1 before hashing hardware receives its work.
+The hardware chooses the offset, but cannot derive the real block time without the hidden timestamp.
+This prevents an ASIC designer from building a reliable future-time "time bomb" that causes the hardware to stop working after a chosen real-world date.
+
+'''Why hide the previous block identifier from hashing hardware?'''
+
+Profile 0 includes a tagged hash of the previous block identifier rather than the identifier itself.
+This prevents hashing hardware from using the visible previous-block hash to estimate Bitcoin's difficulty and therefore approximately infer real time.
+
+The hidden value still occupies the position where existing BLAKE2b hardware expects a previous-block hash, and is derived only from the previous block identifier.
+It therefore changes exactly when prior work becomes stale, in case any existing hardware relies on that field to detect new blocks.
+
+'''Why are the first 48 bits of the hidden previous-block value zero?'''
+
+The first 48 bits are always replaced with zeroes so existing BLAKE2b hardware can continue assuming that portion of its input is zero.
+
+'''Why commit to a dedicated merge-mining field?'''
+
+Committing a dedicated merge-mining field near proof of work allows a merge-mined sidechain to prove the commitment without carrying an entire merkle branch from an L1 generation transaction to the L1 block header.
+This matters even though sidechain users already run an L1 full node:
+a merge-mined block need only meet the sidechain's target, so it is not necessarily also an L1 block, and the L1 node may never see it.
+The sidechain block must then carry its own proof of the commitment.
+
+'''Why does the merge-mining hook input include 256 zero bits?'''
+
+The zero bits put the entire merge-mining right-hand side, together with the SHA256 padding, in a separate final SHA256 input block:
+the tag prefix of the merge-mining hook fills the first SHA256 input block, and the 256 zero bits after header commitment 1 complete the second.
+A merge-mined chain can store the SHA256 midstate in place of header commitment 1, and compute the hook from its right-hand side with a single SHA256 compression rather than two (the tag's input block is the same for every hook, so its midstate is a constant).
+
+'''Why does the first BLAKE2b input begin with 32 zero bits?'''
+
+The 32 zero bits at the start of the first BLAKE2b input ensure that its first 8 bits are zero, as required by the legacy mining protocol implemented by the initial BLAKE2b mining firmware.
+The field is 32 bits wide rather than 8 merely to align the following inputs somewhat.
+
+'''Why have several hashing-hardware profiles?'''
+
+The four profiles support different hashing-machine interfaces and fixed input sizes without changing commitments hidden from the machines.
+The profile selector is itself committed, so changing profiles changes the proof-of-work digest.
+
+* Profile 0 is designed to be compatible with existing BLAKE2b mining hardware.
+* Profile 1 is a layout native to Bitcoin, intended for new hardware.
+
+'''What is the XOR key for?'''
+
+The XOR-key mechanism mitigates block-withholding attacks.
+Until a share is returned, the hasher knows only the XOR key's hash, so it cannot tell whether a given share is also a valid block.
+The key is committed in header commitment 1, while the configurable clear-bit count preserves the portion of the result needed for the intended mining interface.
+
+'''Why does block withholding matter so much?'''
+
+Block withholding is otherwise a pool's worst structural risk:
+an attacker can submit shares for payment while discarding the winning blocks, and the pool's only deterrent is knowing who its customers are well enough to pursue them for the sabotage.
+That pressure pushes pools toward mandatory customer identification and turns them into permissioned, jurisdiction-bound gatekeepers.
+Because the hasher cannot recognize a winning block in order to withhold it, the attack becomes technically impossible rather than merely litigable, and a pool needs no customer identification to defend against it.
+
+The detailed attack procedure is intentionally outside the scope of this document.
+
+'''Wouldn't it be better to make pools impossible?'''
+
+No.
+Pooling over the network serves real needs, and preventing it would make mining more centralized, not less:
+
+* '''Colocation.'''<!--
+--> Miners who cannot pool over the network can still combine hash rate by moving their hardware into shared facilities under a single operator.<!--
+--> That is strictly worse:<!--
+--> the operator gains physical custody of the hardware as well as control of its work, and no proof-of-work rule can prevent it.
+* '''Income variance.'''<!--
+--> Miners have ongoing real costs, such as electricity, hosting, and financing, and many rely on consistent income to cover them.<!--
+--> Without pooling, a small miner's income is a lottery with long dry spells, while a large operation finds blocks often enough for steady income, so larger miners would have a significant advantage.
+* '''Trust favours incumbents.'''<!--
+--> Proposals to make pools impossible, such as nonoutsourceable puzzles<!--
+--><ref>[https://doi.org/10.1145/2810103.2813621 Andrew Miller, Ahmed Kosba, Jonathan Katz, Elaine Shi: Nonoutsourceable Scratch-Off Puzzles to Discourage Bitcoin Mining Coalitions]</ref><!--
+-->, work by letting whoever finds a block take its entire reward.<!--
+--> That deters only cooperation between parties who do not trust each other;<!--
+--> a single large operation, or parties who already trust each other, can still combine hash rate.
+* '''Pooling need not centralize block content.''' With getblocktemplate, or protocols built on it such as DATUM<ref>[https://convoy.xyz/docs/datum The Origins of DATUM]</ref>, each pooled miner can construct its own block, so a pool need only distribute rewards, not choose transactions.
+
+'''Why commit to the block height?'''
+
+The header provides the block's height directly for use by height-based rules, without requiring the coinbase transaction or a count of preceding blocks.
+A node must still verify that the height is one greater than the previous block's height.
+
+<span id="Why_adjust_the_target_at_activation"></span> '''Why adjust the target at activation?'''
+
+SHA256d and BLAKE2b work are not commensurable, so the prior SHA256d target says nothing about how much BLAKE2b work a block should require.
+The [[#Activation target adjustment|activation target adjustment]] therefore sets a starting target suited to initial BLAKE2b mining, once, after which the ordinary difficulty rules calibrate it to the actual BLAKE2b hash rate.
+
+'''Why commit to a headline in the activation block?'''
+
+While Bitcoin was nearly stalled, its abnormally long block interval broke the natural link between block height and real-world time.
+The headline commitment restores that link in a verifiable way:
+it proves that the first BLAKE2b block was not mined before the public restoration of Bitcoin on 2026-08-30.
+
+'''Why this headline?'''
+
+The mainnet headline is the front-page headline of the New York Post's print edition for 2026-08-30.
+Mining with BLAKE2b began immediately when the New York Post published that front page online, so nobody could have mined the activation block before then.
+The rule applies only to the activation block.
+
+=== Lessons learned after the fact ===
+
+The following observations were made after this design was deployed.
+They are non-normative and do not change any rule above.
+
+* <span id="invalid-low-versions"></span>The invalidity of versions <code>0x80000000</code> through <code>0x80000003</code> is a bug.<!--
+--> The reference implementation applies the BIP 34, BIP 66, and BIP 65 minimum-version rules to the version with bit 31 removed, so these versions are rejected as if they were the obsolete versions 0 through 3.<!--
+--> Because the reference implementation enforces it, the restriction is part of consensus;<!--
+--> the rule is stated under [[#Version_field|Version field]].<!--
+--> It has no practical effect, since a version 2 block has no reason to use these versions.
+* Clearing one more leading bit of the hidden previous-block value (49 rather than 48) would have left a value, such as <code>0x80</code> in the byte following the zeroed bits, that profile 0 can never produce. A future hashing protocol could have used it to signal "no change" unambiguously.
+* Profiles 1 through 3 include the merge-mining hook in the final pass so that a merge-mined chain's block headers could omit the extranonce and skip computing the intermediate digest.<!--
+--> In practice this gains nothing:<!--
+--> storing the 256-bit intermediate digest instead takes twice the space of the 128-bit extranonce.<!--
+--> Had the final pass included the merge-mining right-hand side instead of the merge-mining hook, merge-mined chains could have omitted both header commitment 1 and the extranonce, saving 16 bytes.
+
+== History ==
+
+This section preserves the historical record of the upgrade.
+It is non-normative.
+
+=== Algorithm selection ===
+
+This section preserves, for the historical record, how the replacement algorithm was selected.
+The events took place in public community channels during August 2026.
+Announcements and commitments were published in parallel on X/Twitter, on Nostr, and in the Bitcoin Knots Discord and Telegram, and the drawing announcement with its first commitment hash was also posted on Bluesky and Mastodon.
+The events were covered by contemporary press reports.
+The commitment texts, salts, and beacon observations below are preserved from the author's contemporaneous public posts.
+
+==== Screening criteria ====
+
+Candidate algorithms were screened against four criteria, which the author first proposed in the Bitcoin Knots Discord on 2026-08-09, two days before the 2026-08-11 drawing.
+The goal was not ASIC resistance, nor keeping CPUs or GPUs competitive, but a proof of work that is secure from the first day.
+The criteria were:
+
+# '''An existing fleet of ASICs.'''<!--
+--> Without one, the first manufacturer to produce hardware would gain a decisive advantage merely by arriving first, and Bitcoin would be dominated by malicious botnets in the interim.<!--
+--> An existing fleet was valued for this reason, not for its size:<!--
+--> a fleet so large, liquid, or hostile that it could immediately control or attack Bitcoin was itself disqualifying.<!--
+--> Stock SHA256d, and algorithms whose existing fleet was large and hostile enough to overwhelm Bitcoin, were excluded on that ground.
+# '''Open manufacturer entry.'''<!--
+--> Once the ASIC market matures, new independent manufacturers must still be able to enter it easily.<!--
+--> This is determined mainly by the complexity of the algorithm.<!--
+--> SRAM dependency was also considered, but there were no good options requiring it;<!--
+--> Scrypt, for example, was widely considered to have a hostile fleet.
+# '''Break risk.'''<!--
+--> The construction must be conservative and well understood, with low risk of another mathematical break of the kind ASICBoost inflicted on SHA256d.<!--
+--> A newly invented primitive would have lacked the review and implementation maturity needed for an emergency recovery.
+# '''Cheap verification.'''<!--
+--> The fundamental principle of proof of work:<!--
+--> verification must remain very easy even while mining is difficult.<!--
+--> Invalid blocks must be rejected quickly and cheaply, starting with their headers;<!--
+--> memory-hard designs for which an invalid header can force a full expensive computation fail this asymmetry and were excluded.
+
+Consensus was also to be kept clean of legacy mining-protocol compatibility concerns.
+
+==== Candidates ====
+
+After height 961,633, Bitcoin's block production slowed nearly to a stall.
+Replacement algorithms were debated publicly in Bitcoin Knots community channels beginning 2026-08-09.
+Algorithms and approaches raised in that discussion included BLAKE2 variants, BLAKE3, KT256, RandomX, Scrypt, Autolykos v2, and generic CPU- or GPU-oriented mining.
+The short list ultimately committed for the drawing comprised five algorithms, each with existing ASIC hardware:
+BLAKE2b-256, BLAKE2s, BLAKE3x2, Eaglesong, and SHA3x.
+
+On 2026-08-15, the author republished the [[#Screening_criteria|screening criteria]] more broadly, together with an assessment table covering roughly forty candidate algorithms, each rated for its existing fleet or bootstrap path, maturity of ASIC-market competition, hidden-optimization and PoW-function risk, and cheapness of invalid-header rejection.
+<ref>[https://x.com/LukeDashjr/status/2088706321386262771 Author's post of the four screening criteria and candidate assessment table]</ref>
+Judgments preserved from that table include:
+
+* BLAKE2b-256: best overall balance of fleet, regular hardware, and confidence.
+* SHA3x: very clean Keccak-family hardware, with fleet concentration as the main concern.
+* KT256 and clean SHA3-256: "greenfield reserve" -- excellent constructions with no existing fleet for the exact variant, dominated for launch by SHA3x's related Keccak path with an existing fleet.
+* Scrypt:<!--
+--> unusually strong real-world evidence of repeated manufacturer entry, though more complex than a plain hash.<!--
+--> It was nevertheless removed late in the process because many participants had substantiated fears that the existing Scrypt miner fleet would be hostile to Bitcoin.
+* Stock SHA256d: excluded from the algorithm lottery outright -- ASICBoost history plus accumulated physical-design expertise, firmware advantages, and supply-chain entrenchment.
+* kHeavyHash (the only real-world implementation of BIP 52 optical proof of work, for which no optical mining hardware actually exists): excluded for an enormous, liquid, and hostile fleet able to overwhelm Bitcoin.
+* RandomX v2: excluded because a competitive ASIC would resemble a custom CPU.
+* Meaningfully parameterized Argon2d: excluded because a small invalid header can force the full expensive memory-hard computation, an unacceptable denial-of-service asymmetry.
+
+==== Selection lottery ====
+
+Rather than allowing any individual or committee to pick the winner, the process adopted was to fix a short list of viable candidates and let a deterministic random drawing make the final selection.
+As the announcement put it:
+"Nobody knows the new algorithm right now, and nobody will until we all know at the same moment."
+<ref>[https://x.com/LukeDashjr/status/2087164051797192886 Drawing announcement with the first proof-of-fairness commitment hash (13:07 UTC 2026-08-11)]</ref>
+The candidate list was curated so that only acceptable options were on it;
+as the author later summarized, "It's not important that it be truly random, only that nobody got advance notice of it."
+<ref>[https://njump.me/note1hdu8qxj8v8urr4m8zgs5jjw9f6ljw62hnfjxzhclnkj8z6t9kwvsgyrx05 Author on the selection principle (Nostr)] and [https://x.com/LukeDashjr/status/2087313112944750990 Similar statement on X]</ref>
+Advance knowledge of the winning algorithm would have let its holder begin hardware preparation early.
+
+===== Failed first drawing =====
+
+The drawing was announced at 13:07 UTC on 2026-08-11.
+Its randomness beacon was the last hexadecimal digit of the hash of the first testnet4 block found after 14:00 UTC that day.
+The digit-to-candidate mapping was fixed in advance together with a random salt, but kept secret;
+only its SHA256 hash (a "proof of fairness") was published with the announcement:
+<ref>[https://x.com/LukeDashjr/status/2087164051797192886 Drawing announcement on X (13:07 UTC)] and [https://njump.me/note187zecrjmqjcwewl6y6vjpxaeqc50w99ty7rrxktrxcq6c4lev53sv4jcgq Nostr post (13:09 UTC)]</ref>
+
+  71a7960874f3352f4ba600ce67bd6f8e96702565abea93021fa86349d99a45e8
+
+Concealing the mapping until after the beacon meant that even a party able to grind the beacon could not aim it at a specific algorithm;
+the salt prevents brute-forcing the committed contents from the published hash.
+As the announcement put it:
+"You can prove I didn't rig it, by SHA256 hashing the mapping text file."
+
+The mapping was revealed at 14:13 UTC, immediately after the beacon window:
+<ref>[https://x.com/LukeDashjr/status/2087180586653716646 Reveal of the committed digit-to-candidate mapping and salt (14:13 UTC)]</ref>
+
+<pre>
+0 SHA3x
+1 BLAKE2s
+2 BLAKE2s
+3 BLAKE3x2
+4 SHA3x
+5 SHA3x
+6 BLAKE2b-256
+7 SHA3x
+8 BLAKE2b-256
+9 BLAKE2b-256
+a BLAKE2s
+b BLAKE3x2
+c Eaglesong
+d BLAKE3x2
+e BLAKE2b-256
+f Eaglesong
+
+Random salt: 388d2e17730db6f15a34aa3f2a67808c
+</pre>
+
+The resulting weights were 4/16 each for SHA3x and BLAKE2b-256, 3/16 each for BLAKE2s and BLAKE3x2, and 2/16 for Eaglesong.
+
+The first block observed after 14:00 UTC was testnet4 height 147,930, <code>0000000000db6829f71bee436279bdacd2af7d20a75e710da073f1ad42d65107</code>, whose final digit <code>7</code> mapped to SHA3x.
+<ref>[https://x.com/LukeDashjr/status/2087180796188594387 Observed first-draw beacon block at testnet4 height 147,930 (14:14 UTC)]</ref>
+But three competing testnet4 blocks were mined simultaneously at the same height -- publicly attributed to hostile actors deliberately disrupting the drawing -- so there was no unambiguous "first block".
+The competing blocks' digits selected different candidates, leaving SHA3x and BLAKE2b-256 in contention.
+
+===== Superseded second commitment =====
+
+A second commitment, now between only the two remaining candidates, was posted at 14:43 UTC as a bare SHA256 hash:
+<ref>[https://x.com/LukeDashjr/status/2087188103718973731 Second proof-of-fairness commitment hash (14:43 UTC)]</ref>
+
+  b96b58acccb69746ea7b2f1b9793ed53cda2cdbe5fd7d5ef1878178bbef537f0
+
+This time even the criteria themselves were hidden inside the commitment.
+The first drawing's publicly pre-announced procedure had been attacked the moment it became actionable, so the author declined to describe the new procedure in advance:
+"Apparently if I say [the criteria], it will get attacked.
+The criteria is part of the new hash.
+When I post it, it'll be clear."
+
+The criteria -- revealed "for the record" at 19:53 UTC, after the selection had concluded, honoring the commit-then-reveal discipline even for a superseded stage -- were:
+<ref>[https://x.com/LukeDashjr/status/2087266122609430536 For-the-record reveal of the superseded second criteria (19:53 UTC)]</ref>
+
+<pre>
+Next Testnet4 block after 14:45 UTC that goes uncontested for 5 minutes. 0-7 is SHA3x, 8,9,a-f is BLAKE2b.
+</pre>
+
+The uncontested-for-five-minutes requirement was designed to fix the ambiguity failure of the first drawing, but set the bar too high:
+no qualifying block appeared for over two hours.
+Meanwhile, at 15:51 UTC, an override was announced publicly:
+"Alternatively:
+If a valid (including BIP110 of course) Bitcoin block is found prior to the new criteria being met, we can use that instead."
+Testnet4 was acknowledged to be a poor beacon, and a valid Bitcoin block -- whose production cost makes grinding uneconomical -- was preferred wherever available;
+but with mainnet finding roughly one block every other day at the post-split hash rate, it could not serve as the primary beacon, and the alternatives (trusting a third-party randomness source, or syncing a hostile altcoin's node) were ruled out.
+
+===== Final draw =====
+
+At 17:01 UTC the final criteria were committed, again as a bare SHA256 hash ("It's been an hour.
+Clearly I set the bar too high.
+I will reveal the previous criteria when we're done.
+In the meantime, here is the new criteria"):<ref>[https://x.com/LukeDashjr/status/2087222841213083931 Final proof-of-fairness commitment hash (17:01 UTC)]</ref>
+
+  ba712f48962a43163266cec09a069825b89a316140a9701fa4931b5fb6407f4e
+
+The committed text, revealed at 17:04 UTC, was:
+<ref>[https://x.com/LukeDashjr/status/2087223637271052452 Reveal of the committed final-draw criteria and salt (17:04 UTC)]</ref>
+
+<pre>
+Take the final hex digit from all Testnet4 blocks found after 17:00 UTC, but stopping after 60 seconds of "silence" (no new blocks).
+
+Sum those digits, and take the last digit of the sum.
+
+0-7 = SHA3x
+8,9,a-f = BLAKE2b
+
+If a valid (BIP110) Bitcoin block is found prior to this condition being satisfied, the last digit of that block shall be used instead.
+
+Random salt: e4ad05e245927a5c398d2a6d6816bf9a
+</pre>
+
+Four testnet4 blocks were observed between 17:02:11 and 17:02:16 UTC, followed by more than sixty seconds of silence, closing the window:
+<ref>[https://x.com/LukeDashjr/status/2087224213199348166 Observed final-draw beacon blocks, testnet4 heights 147,949-147,952 (17:06 UTC)]</ref>
+
+{| class="wikitable"
+! Observed (UTC)
+! Height
+! Block hash
+! Final digit
+|-
+| 17:02:11
+| 147,949
+| <code>0000000000000001bcda56f2ec833fe96b4585a1953124b2c1c1f9a34709a027</code>
+| 7
+|-
+| 17:02:12
+| 147,950
+| <code>00000000006859c534d62586f46354cd20615c5edfbc063d451254c7724da14d</code>
+| d
+|-
+| 17:02:14
+| 147,951
+| <code>0000000000750724f5e39437cc3661f3da66ec05dd8eccb7ad33b0089efe8ccc</code>
+| c
+|-
+| 17:02:16
+| 147,952
+| <code>0000000000012c9f64670244da8b031a629ecdb7a4f5831913b8ce6f0e92e349</code>
+| 9
+|}
+
+The digit sum is 0x7 + 0xd + 0xc + 0x9 = 0x29, whose final hexadecimal digit <code>9</code> falls in the <code>8</code>-<code>f</code> range.
+The result was announced at 17:08 UTC on 2026-08-11 -- "7+D+C+9 = 29 / 9 = BLAKE2b" -- selecting BLAKE2b-256, the algorithm specified in this document.
+<ref>[https://x.com/LukeDashjr/status/2087224739265687685 Drawing result: "7+D+C+9 = 29 / 9 = BLAKE2b" (17:08 UTC)]</ref>
+
+The final draw's design addressed the first drawing's ambiguity.
+Aggregating over every block in the window removes any dependence on which competing block counts as "first" -- the same burst production that broke the first drawing occurred again, harmlessly.
+And the override clause prefers the expensive-to-grind mainnet beacon whenever one exists.
+
+===== Lessons learned from the drawings =====
+
+The failed first stages demonstrated concretely that a fair public drawing requires a pre-committed candidate list and procedure, and a randomness beacon that is expensive to bias and yields a unique result -- achieved in the final draw by salted commitments that concealed even the procedure itself until after the fact, aggregation over an unpredictable window, and the mainnet-block override.
+
+=== Activation ===
+
+Mining with BLAKE2b began on 2026-08-30, when the New York Post published the front page bearing the [[#Activation_headline|activation headline]].
+Block 961,639 was the final SHA256d block.
+
+Activation was unanimous and did not split the chain:
+no valid SHA256d block was produced after height 961,639, so no chain continued under the previous rules.
+
+=== Retargeting after activation ===
+
+The activation block, at height 961,640 on 2026-08-30, had a difficulty of about 130 P, set by the [[#Activation_target_adjustment|activation target adjustment]].
+Hash rate grew gradually from about 0.6 Ph/s, and the remaining 2,008 blocks of that retarget period were mined in about 2.4 days.
+<ref name="retarget-blocks">Figures are derived from the timestamps and targets in the block headers.
+The linked retarget blocks can be viewed, for example, at [https://mempool.guide/block/0000000000000050c1e5f69672f459293be14f46e5a494e7a8c8541396f18eeb mempool.guide].</ref>
+
+As expected, the first retarget after activation, at height 963,648, made the target easier:
+the period it measured began at height [https://mempool.guide/block/0000000000000000000169eb6f811ddbd0daf343af7b62180cdb13e7c78dbc16 961,632] on 2026-08-08, so most of it elapsed while SHA256d block production was nearly stalled.
+The difficulty fell by about 41.3%, and with hash rate steady at about 2.4 Ph/s, the next 2,016 blocks took only about 17.5 hours.
+The following retargets raised the difficulty by the maximum factor of four, while hash rate rose only slowly, to about 3.5 Ph/s.
+
+Less expected, several periods after activation, BLAKE2b hashing hardware that had been mining BLAKE2b-based altcoins joined.
+Between 2026-09-05 and 2026-09-12, hash rate rose from about 4 Ph/s to about 30 Ph/s.
+<ref name="retarget-blocks" />
+Two more retargets by the maximum factor of four, and one of about 2.99, were needed to catch up:
+
+{| class="wikitable"
+! Height !! Date !! Difficulty change !! Difficulty !! Average interval until next retarget !! Average hash rate
+|-
+| [https://mempool.guide/block/0000000000000050c1e5f69672f459293be14f46e5a494e7a8c8541396f18eeb 961,640] || 2026-08-30 || (activation) || 130 P || 1.7 min || 1.25 Ph/s
+|-
+| [https://mempool.guide/block/000000000000004033e654c51d046a440d29f32129f6f909c0075b15991b66a9 963,648] || 2026-09-01 || ×0.587 || 76.6 P || 0.52 min || 2.45 Ph/s
+|-
+| [https://mempool.guide/block/0000000000000027b9e222cff12b80204eff8c065addf6b12c0a54e6462e2764 965,664] || 2026-09-02 || ×4 || 307 P || 1.6 min || 3.14 Ph/s
+|-
+| [https://mempool.guide/block/000000000000000298823af52768392771d927064a84191faba5aab8ff000e39 967,680] || 2026-09-04 || ×4 || 1.23 E || 2.4 min || 8.51 Ph/s
+|-
+| [https://mempool.guide/block/00000000000000027d27e8252a4201a8c2e22a1ee820c1921ef459d3423ffaea 969,696] || 2026-09-08 || ×4 || 4.90 E || 3.3 min || 24.4 Ph/s
+|-
+| [https://mempool.guide/block/000000000000000037dd1ac9888259001bd7ce8195be3a2185163947507b942d 971,712] || 2026-09-12 || ×2.99 || 14.7 E || 7.4 min || 33.1 Ph/s
+|-
+| [https://mempool.guide/block/00000000000000000d5de86288f709e998c4d9e754e85dd966d208c908eadacd 973,728] || 2026-09-23 || ×1.35 || 19.9 E || 9.1 min || 36.4 Ph/s
+|-
+| [https://mempool.guide/block/00000000000000007f85bb387c9128bc606a483ad7a7784701517effadca9c34 975,744] || 2026-10-05 || ×1.10 || 21.8 E || 8.6 min || 42.5 Ph/s
+|}
+
+By the retarget at height 975,744, about five weeks after activation, the block interval had settled near the ten minute target.
+
+== Backward compatibility ==
+
+This upgrade is not backward compatible.
+
+Before <code>activation_height</code>, historical block headers and block identifiers are unchanged.
+Beginning at <code>activation_height</code>:
+
+* block headers gain the fields specified above;
+* version bit 31 selects the new header format;
+* block identifiers and proof of work use the construction in this document;
+* the target receives a one-time adjustment;
+* the height and transaction-count commitments are enforced; and
+* headers with version bit 31 clear are invalid.
+
+The [[bip-blake2b-servicebit.mediawiki|peer-services specification]] defines the version-selected header serialization and service-bit advertisement.
+The separate [[bip-blake2b-mining-interface.mediawiki|mining-interface specification]] defines the getblocktemplate changes.
+Block-file layout, indexing, and other local implementation details are left to implementations.
+
+== Test vectors ==
+
+The first vector uses hashing-hardware profile 0, enables the time offset, and uses an all-zero XOR key:
+
+<pre>
+serialized_header =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211efcdab89ffeeddccbbaa998877665544332211005802000003001c000000000000000000000000000000000040d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+
+XOR-key hash =
+86e4855b51daf0932719011a6565a5908aef105fc6f8b85a23601de43865f4db
+
+Header commitment 1 =
+4ff7ec7f24f6935064cb962ec8cc0c947d60621cc22c5ba8516b0b995cd0c01b
+
+Merge-mining hook =
+ab5becb2336a3701557b0f6e33de39bd333072b8494c7c60952a8e8a636565e3
+
+Intermediate digest =
+7e6326906eaa52fe59e03a14f1dfb8dd5d6e78497e56a8a6e4f4fb4d385e43db
+
+Final BLAKE2b input =
+000000000000943aff74219e1f45899abfdf536373c0f2fc92e6fe58335cd0ad0df0ad0b4433221158020000efcdab897e6326906eaa52fe59e03a14f1dfb8dd5d6e78497e56a8a6e4f4fb4d385e43db
+
+Final BLAKE2b digest =
+4b495dcf05d70a49785b799b22284fbcd9dd1209237c53c87e4674b15587d704
+
+XOR mask =
+0000000000000000000000000000000000000000000000000000000000000000
+
+Block hash =
+4b495dcf05d70a49785b799b22284fbcd9dd1209237c53c87e4674b15587d704
+</pre>
+
+Additional complete header vectors are:
+
+<pre>
+name = profile_1_time_offset_nonzero_key
+serialized_header =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211efcdab89ffeeddccbbaa998877665544332211005802000001001d00efcdab8967452301efcdab896745230141d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+block_hash =
+44b383821dea9af8d7d81ba7741c34ac8c07ab81ab081d8b6bf0575a787a1eef
+
+name = profile_2_time_offset_selector_7
+serialized_header =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0bddccbbaaefcdab89ffeeddccbbaa998877665544332211005802000003001e071032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+block_hash =
+06fddae4eaca10b85c87a3c7ed71717fd83998a32fe13f4780722b1f5d882e76
+
+name = profile_3_time_offset_selector_8
+serialized_header =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211040302010000000000000000ffffffffffffffff5802000003001f081032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+block_hash =
+e6304527536f619d3ad71b1c21a22fdef9068498acc561b4100b034373a87058
+
+name = profile_0_time_offset_disabled_selector_255
+serialized_header =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f000943577ffff001dffffffff44332211efcdab89ffeeddccbbaa9988776655443322110088776655030018ff2222222222222222111111111111111140d10c000000000000000000000000000000000000000000000000000000000000000000
+block_hash =
+c31b24420d67f86e524f980a24a18e88f36c821046d5288251b5d88998c69f86
+</pre>
+
+For reserved-bit validation, setting bit 6 or bit 7 of the packed byte in the first vector produces an invalid header.
+
+== Reference implementation ==
+
+The reference implementation is [https://github.com/bitcoinknots/bitcoin/tree/8c85b1585dac23f964e2dd32045624de7f02aa58 Bitcoin Knots v29.4.1.knots20260508], commit <code>8c85b1585dac23f964e2dd32045624de7f02aa58</code>.
+The relevant code is principally in <code>src/primitives/block.h</code>, <code>src/primitives/block.cpp</code>, <code>src/pow.cpp</code>, <code>src/kernel/chainparams.cpp</code>, and <code>src/validation.cpp</code>.
+
+== References ==
+
+<references />
