@@ -765,7 +765,7 @@ The [[#Activation target adjustment|activation target adjustment]] therefore set
 
 Like any checkpoint, it reduces the near-zero risk of reorganizing settled history to absolute zero.
 Here, that risk is also less remote than usual:
-chain work counts expected hashes without regard to the algorithm, and a block at the final SHA256d target counts as much as tens of thousands of BLAKE2b blocks at current targets.
+chain work counts expected hashes without regard to the algorithm, and a block at the final SHA256d target counts as much as many thousands of BLAKE2b blocks (around 19,400 as of 2026 November).
 Miners with SHA256d hardware could fork before activation and compress timestamps to make the retarget at height 961,632 up to four times harder, so that the SHA256d work in the last few blocks of their branch compares as greater than the work of the entire BLAKE2b chain.
 Like the timewarp attack, this manipulates the timestamps that retargeting measures;
 but where the timewarp attack makes targets easier in order to mine more blocks, this makes them harder in order to inflate the chain work counted per block.
