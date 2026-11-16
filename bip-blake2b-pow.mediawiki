@@ -80,6 +80,9 @@ Concatenation is written using <code>||</code>.
 
 A block identifier is the 256-bit string whose bytes appear, in order, in the block's conventional hexadecimal form.
 
+The generation transaction, often called the coinbase transaction, is a block's first transaction.
+The coinbase is the data in its only input, serialized in the field used for an ordinary transaction's scriptSig.
+
 === Deployment parameters ===
 
 A deployment of this specification defines:
@@ -114,13 +117,16 @@ Testnet4 uses:
 <pre>
 activation_height       = 150308
 activation_headline     = ""  # no headline requirement
-activation_target_shift = undefined
+activation_target_shift = 20
 </pre>
 
 The activation block was mined more than 20 minutes after its parent, so testnet4's minimum-difficulty rule gave it the proof-of-work limit, compact <code>0x1d00ffff</code>, a difficulty of about 4.3 G expected hashes.
-The activation target adjustment applies only to the activation block, so no value of <code>activation_target_shift</code> can affect testnet4, and none is defined.
-In practice, testnet4 behaves as if it were 0:
-later blocks take their targets from earlier blocks, so they inherit the unshifted SHA256d target of the first block in the retarget period, as both the minimum-difficulty rule and the BIP 94 retarget look there.
+Since the activation target is capped at that limit, the shift had no effect.
+Later blocks not using the minimum-difficulty exception take the target of the most recent block not at the proof-of-work limit, which skips the activation block and reaches a SHA256d block.
+However, testnet4 is easily reorganized, so a competing block at <code>activation_height</code> remains possible;
+if mined within 20 minutes of its parent, it would use the last non-minimum-difficulty target multiplied by 2<sup>20</sup>, capped at the proof-of-work limit.
+Unless so capped, later blocks would take that shifted target instead.
+Either way, at the next retarget, at height 151,200, BIP 94 scales the target of the first block in the retarget period, height 149,184, which predates activation, so testnet4 returns to its SHA256d target regardless.
 
 === Version field ===
 
@@ -138,7 +144,7 @@ Version bits signalling, including mandatory signalling, uses top bits (bits 31 
 
 When version bit 31 is set, the block header consists of the fields below.
 This section defines their widths and meanings, not their order, offsets, or padding in the serialized header;
-the [[bip-blake2b-servicebit.mediawiki|peer-services specification]] defines that serialization.
+the [[bip-blake2b-p2p.mediawiki|peer-services specification]] defines that serialization.
 
 The historical header fields remain, with the nonce extended:
 
@@ -333,6 +339,8 @@ The input to the tagged hash is the concatenation of these rows in order:
 | 256 || XOR-key hash
 | Tagged-hash output defined above
 |}
+
+For the activation block, whose parent is a SHA256d block, the previous block's identifier is the reverse of the parent's proof-of-work digest.
 
 The concatenation is 952 bits (119 bytes).
 Header commitment 1 is:
@@ -531,9 +539,9 @@ The conventional hexadecimal block identifier is the proof-of-work digest writte
 Without an adjustment, the first BLAKE2b block, at <code>activation_height</code>, would carry over the target from SHA256d mining, which is [[#Why_adjust_the_target_at_activation|not a measure of BLAKE2b work]].
 That block alone instead uses a starting target for BLAKE2b mining, derived by scaling that target by a deployment-specific factor of 2<sup>activation_target_shift</sup>.
 
-First calculate <code>sha256d_target</code>, the target the activation block would have under the SHA256d difficulty rules.
+First, calculate <code>sha256d_target</code> as the target the activation block would have under the ordinary difficulty rules.
 
-Decode that compact target to an integer, multiply it by 2<sup>activation_target_shift</sup>, and cap the result at the network proof-of-work limit:
+Multiply <code>sha256d_target</code> by 2<sup>activation_target_shift</sup>, and cap the result at the network proof-of-work limit:
 
 <pre>
 activation_target =
@@ -541,7 +549,7 @@ activation_target =
         sha256d_target * 2**activation_target_shift)
 </pre>
 
-Re-encode the result using Bitcoin's compact target format.
+Encode the result using Bitcoin's compact target format.
 This is not merely serialization:
 the compact format truncates low-order bits the result may have, and the truncated value is the activation block's target.
 
@@ -559,6 +567,14 @@ The rule applies only to the activation block.
 
 The required byte sequence MUST match exactly;
 encoding and whitespace are part of the requirement.
+
+=== Chain work and activation checkpoint ===
+
+Chain work is unchanged:
+each block contributes 2<sup>256</sup> / (target + 1), and nodes prefer the valid chain with the most cumulative work.
+
+On mainnet, nodes SHOULD reject any chain that does not include block 961,640 (<code>0000000000000050c1e5f69672f459293be14f46e5a494e7a8c8541396f18eeb</code>), the activation block, once they know of that block.
+This is a [[#Why_checkpoint_the_activation_block|safeguard against a pre-activation fork]] appearing to have more chain work only because chain work falsely conflates SHA256d and BLAKE2b hashes.
 
 == Rationale ==
 
@@ -599,9 +615,9 @@ each is detailed in its own answer below.
 --> pooling stays open, competitive, and jurisdiction-independent instead of consolidating into a few permissioned providers.
 ** '''Hashing hardware isolated from Bitcoin internals.'''<!--
 --> The 96-bit nonce gives hashing hardware ample search space, and the 128-bit extranonce does the same for the software that feeds it.<!--
---> The historical 32-bit nonce was too small, so mining protocols were forced to bring the coinbase transaction and merkle tree into scope for mining hardware.<!--
+--> The historical 32-bit nonce was too small, so mining protocols were forced to bring the generation transaction and merkle tree into scope for mining hardware.<!--
 --> Hardware often handled those Bitcoin internals incorrectly:<!--
---> some could not handle larger coinbase transactions, which interferes with paying miners directly from the coinbase, and transferring them wasted bandwidth.
+--> some could not handle larger generation transactions, which interferes with paying miners directly from the generation transaction, and transferring them wasted bandwidth.
 * '''Vendor-independent hardware lifetime.''' Hiding real time from hashing hardware (the hidden timestamp and hidden previous-block value) prevents an ASIC vendor from building reliable expiry "time bombs" into its products, which would let an incumbent vendor force refleeting on its own schedule and undermine second-hand markets that keep small miners viable.
 
 '''Why not keep SHA256d?'''
@@ -646,7 +662,7 @@ Committing the count gives those bodies different headers, so an invalid body ca
 '''Are 16 bits enough for the transaction count?'''
 
 The 16-bit committed transaction count can represent at most 65,535 transactions.
-Under the general 4,000,000-weight-unit block limit, a version 2 block cannot contain more than 16,663 transactions even if every non-coinbase transaction has the minimum 60-byte stripped serialization.
+Under the general 4,000,000-weight-unit block limit, a version 2 block cannot contain more than 16,663 transactions even if every transaction other than the generation transaction has the minimum 60-byte stripped serialization.
 Witness data can only reduce that transaction count.
 The 16-bit width therefore does not constrain the general maximum, nor any lower block-weight limit imposed by other rules.
 
@@ -737,13 +753,36 @@ Pooling over the network serves real needs, and preventing it would make mining 
 
 '''Why commit to the block height?'''
 
-The header provides the block's height directly for use by height-based rules, without requiring the coinbase transaction or a count of preceding blocks.
+The header provides the block's height directly for use by height-based rules, without requiring the generation transaction or a count of preceding blocks.
 A node must still verify that the height is one greater than the previous block's height.
 
 <span id="Why_adjust_the_target_at_activation"></span> '''Why adjust the target at activation?'''
 
 SHA256d and BLAKE2b work are not commensurable, so the prior SHA256d target says nothing about how much BLAKE2b work a block should require.
 The [[#Activation target adjustment|activation target adjustment]] therefore sets a starting target suited to initial BLAKE2b mining, once, after which the ordinary difficulty rules calibrate it to the actual BLAKE2b hash rate.
+
+<span id="Why_checkpoint_the_activation_block"></span> '''Why checkpoint the activation block?'''
+
+Like any checkpoint, it reduces the near-zero risk of reorganizing settled history to absolute zero.
+Here, that risk is also less remote than usual:
+chain work counts expected hashes without regard to the algorithm, and a block at the final SHA256d target counts as much as tens of thousands of BLAKE2b blocks at current targets.
+Miners with SHA256d hardware could fork before activation and compress timestamps to make the retarget at height 961,632 up to four times harder, so that the SHA256d work in the last few blocks of their branch compares as greater than the work of the entire BLAKE2b chain.
+Like the timewarp attack, this manipulates the timestamps that retargeting measures;
+but where the timewarp attack makes targets easier in order to mine more blocks, this makes them harder in order to inflate the chain work counted per block.
+Rejecting chains without the activation block prevents this without changing how work is counted.
+
+'''Aren't checkpoints deprecated?'''
+
+Checkpoints were introduced in Bitcoin 0.3.2 as a security safeguard.
+Announcing them, Satoshi Nakamoto explained that "once the software has settled what the widely accepted block chain is, there's no point in leaving open the unwanted non-zero possibility of revision months later."
+<ref>[https://satoshi.nakamotoinstitute.org/posts/bitcointalk/232/ Satoshi Nakamoto: Bitcoin 0.3.2 released]</ref>
+Some developers later recast checkpoints as merely a defence against resource exhaustion during initial synchronization.
+Bitcoin Core stopped adding checkpoints after block 295,000 (in 2014) and later removed them in favour of a minimum-chain-work threshold and header pre-synchronization.
+These alternative mechanisms limit the resources a low-work chain can consume, but they do not eliminate that possibility of revision, which is the purpose Satoshi gave checkpoints.
+Bitcoin Knots, however, has continued to update checkpoints, including checkpoints aimed at preventing attempts to reorganize out Segwit/BIP148 during the 2017 block-size conflict.
+<ref>[https://en.bitcoin.it/wiki/Bitcoin_Knots Bitcoin Knots] describes updated checkpoints as preventing attacks attempting to reorganize out Segwit.</ref>
+A checkpoint does not increase trust:
+it never makes an invalid block valid, and it names only a block the network has already settled.
 
 '''Why commit to a headline in the activation block?'''
 
@@ -1049,17 +1088,34 @@ Beginning at <code>activation_height</code>:
 * the height and transaction-count commitments are enforced; and
 * headers with version bit 31 clear are invalid.
 
-The [[bip-blake2b-servicebit.mediawiki|peer-services specification]] defines the version-selected header serialization and service-bit advertisement.
+The [[bip-blake2b-p2p.mediawiki|peer-services specification]] defines the version-selected header serialization and service-bit advertisement.
 The separate [[bip-blake2b-mining-interface.mediawiki|mining-interface specification]] defines the getblocktemplate changes.
 Block-file layout, indexing, and other local implementation details are left to implementations.
 
 == Test vectors ==
 
+In these vectors, integers are given in decimal, or in hexadecimal with a <code>0x</code> prefix;
+bit strings are given as hexadecimal bytes in order, with the previous block given as its identifier.
+
 The first vector uses hashing-hardware profile 0, enables the time offset, and uses an all-zero XOR key:
 
 <pre>
-serialized_header =
-000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211efcdab89ffeeddccbbaa998877665544332211005802000003001c000000000000000000000000000000000040d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+version            = 0xa0000000
+previous_block     = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+merkle_root        = 00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0
+timestamp          = 1999999400
+target             = 0x1d00ffff
+nonce              = 0df0ad0b44332211efcdab89
+extranonce         = ffeeddccbbaa99887766554433221100
+time_offset        = 600
+transaction_count  = 3
+profile_selector   = 0
+time_offset_enable = 1
+reserved_bits      = 3
+clear_bit_count    = 0
+xor_key            = 00000000000000000000000000000000
+height             = 840000
+mm_rhs             = 8967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
 
 XOR-key hash =
 86e4855b51daf0932719011a6565a5908aef105fc6f8b85a23601de43865f4db
@@ -1090,26 +1146,82 @@ Additional complete header vectors are:
 
 <pre>
 name = profile_1_time_offset_nonzero_key
-serialized_header =
-000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211efcdab89ffeeddccbbaa998877665544332211005802000001001d00efcdab8967452301efcdab896745230141d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+version            = 0xa0000000
+previous_block     = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+merkle_root        = 00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0
+timestamp          = 1999999400
+target             = 0x1d00ffff
+nonce              = 0df0ad0b44332211efcdab89
+extranonce         = ffeeddccbbaa99887766554433221100
+time_offset        = 600
+transaction_count  = 1
+profile_selector   = 1
+time_offset_enable = 1
+reserved_bits      = 3
+clear_bit_count    = 0
+xor_key            = efcdab8967452301efcdab8967452301
+height             = 840001
+mm_rhs             = 8967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
 block_hash =
 44b383821dea9af8d7d81ba7741c34ac8c07ab81ab081d8b6bf0575a787a1eef
 
-name = profile_2_time_offset_selector_7
-serialized_header =
-000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0bddccbbaaefcdab89ffeeddccbbaa998877665544332211005802000003001e071032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+name = profile_2_time_offset_clear_bits_7
+version            = 0xa0000000
+previous_block     = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+merkle_root        = 00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0
+timestamp          = 1999999400
+target             = 0x1d00ffff
+nonce              = 0df0ad0bddccbbaaefcdab89
+extranonce         = ffeeddccbbaa99887766554433221100
+time_offset        = 600
+transaction_count  = 3
+profile_selector   = 2
+time_offset_enable = 1
+reserved_bits      = 3
+clear_bit_count    = 7
+xor_key            = 1032547698badcfe1032547698badcfe
+height             = 840000
+mm_rhs             = 8967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
 block_hash =
 06fddae4eaca10b85c87a3c7ed71717fd83998a32fe13f4780722b1f5d882e76
 
-name = profile_3_time_offset_selector_8
-serialized_header =
-000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211040302010000000000000000ffffffffffffffff5802000003001f081032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+name = profile_3_time_offset_clear_bits_8
+version            = 0xa0000000
+previous_block     = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+merkle_root        = 00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0
+timestamp          = 1999999400
+target             = 0x1d00ffff
+nonce              = 0df0ad0b4433221104030201
+extranonce         = 0000000000000000ffffffffffffffff
+time_offset        = 600
+transaction_count  = 3
+profile_selector   = 3
+time_offset_enable = 1
+reserved_bits      = 3
+clear_bit_count    = 8
+xor_key            = 1032547698badcfe1032547698badcfe
+height             = 840000
+mm_rhs             = 8967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
 block_hash =
 e6304527536f619d3ad71b1c21a22fdef9068498acc561b4100b034373a87058
 
-name = profile_0_time_offset_disabled_selector_255
-serialized_header =
-000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f000943577ffff001dffffffff44332211efcdab89ffeeddccbbaa9988776655443322110088776655030018ff2222222222222222111111111111111140d10c000000000000000000000000000000000000000000000000000000000000000000
+name = profile_0_time_offset_disabled_clear_bits_255
+version            = 0xa0000000
+previous_block     = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+merkle_root        = 00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0
+timestamp          = 2000000000
+target             = 0x1d00ffff
+nonce              = ffffffff44332211efcdab89
+extranonce         = ffeeddccbbaa99887766554433221100
+time_offset        = 1432778632
+transaction_count  = 3
+profile_selector   = 0
+time_offset_enable = 0
+reserved_bits      = 3
+clear_bit_count    = 255
+xor_key            = 22222222222222221111111111111111
+height             = 840000
+mm_rhs             = 0000000000000000000000000000000000000000000000000000000000000000
 block_hash =
 c31b24420d67f86e524f980a24a18e88f36c821046d5288251b5d88998c69f86
 </pre>
