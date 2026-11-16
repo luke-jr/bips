@@ -1040,6 +1040,7 @@ no valid SHA256d block was produced after height 961,639, so no chain continued 
 The activation block, at height 961,640 on 2026-08-30, had a difficulty of about 130 P, set by the [[#Activation_target_adjustment|activation target adjustment]].
 Hash rate grew gradually from about 0.6 Ph/s, and the remaining 2,008 blocks of that retarget period were mined in about 2.4 days.
 <ref name="retarget-blocks">Figures are derived from the timestamps and targets in the block headers.
+The table estimates average hash rate as the expected hashes per block at the period's target, multiplied by the number of blocks and divided by the elapsed time between its first block and the next retarget block.
 The linked retarget blocks can be viewed, for example, at [https://mempool.guide/block/0000000000000050c1e5f69672f459293be14f46e5a494e7a8c8541396f18eeb mempool.guide].</ref>
 
 As expected, the first retarget after activation, at height 963,648, made the target easier:
@@ -1061,9 +1062,9 @@ Two more retargets by the maximum factor of four, and one of about 2.99, were ne
 |-
 | [https://mempool.guide/block/0000000000000027b9e222cff12b80204eff8c065addf6b12c0a54e6462e2764 965,664] || 2026-09-02 || ×4 || 307 P || 1.6 min || 3.14 Ph/s
 |-
-| [https://mempool.guide/block/000000000000000298823af52768392771d927064a84191faba5aab8ff000e39 967,680] || 2026-09-04 || ×4 || 1.23 E || 2.4 min || 8.51 Ph/s
+| [https://mempool.guide/block/000000000000000298823af52768392771d927064a84191faba5aab8ff000e39 967,680] || 2026-09-04 || ×4 || 1.23 E || 2.4 min || 8.48 Ph/s
 |-
-| [https://mempool.guide/block/00000000000000027d27e8252a4201a8c2e22a1ee820c1921ef459d3423ffaea 969,696] || 2026-09-08 || ×4 || 4.90 E || 3.3 min || 24.4 Ph/s
+| [https://mempool.guide/block/00000000000000027d27e8252a4201a8c2e22a1ee820c1921ef459d3423ffaea 969,696] || 2026-09-08 || ×4 || 4.90 E || 3.3 min || 24.5 Ph/s
 |-
 | [https://mempool.guide/block/000000000000000037dd1ac9888259001bd7ce8195be3a2185163947507b942d 971,712] || 2026-09-12 || ×2.99 || 14.7 E || 7.4 min || 33.1 Ph/s
 |-
