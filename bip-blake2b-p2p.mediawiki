@@ -1,0 +1,289 @@
+<pre>
+  BIP: ?
+  Layer: Peer Services
+  Title: BLAKE2b Proof of Work (Peer Services)
+  Authors: Luke Dashjr <luke+bip@dashjr.org>
+  Status: Draft
+  Type: Specification
+  Assigned: ?
+  License: BSD-2-Clause
+  Requires: FIXME-BLAKE2B
+</pre>
+
+== Abstract ==
+
+This document specifies peer-to-peer protocol changes for the [[bip-blake2b-pow.mediawiki|BLAKE2b upgrade]].
+It defines the serialized version 2 block header and <code>NODE_BLAKE2B</code>, a service bit for software supporting that serialization.
+
+== Copyright ==
+
+This document is licensed under the 2-clause BSD license.
+
+== Motivation ==
+
+The BLAKE2b proof-of-work specification adds fields to the block header, but defines only their widths and meanings, not how they are serialized.
+Peers need a common serialization to exchange version 2 headers and blocks.
+Software that understands only the historical 80-byte header cannot parse them, so peers also need a way to tell which peers can.
+
+== Specification ==
+
+=== Block-header serialization ===
+
+When version bit 31 is clear, the historical 80-byte header is used.
+When it is set, the serialized block header is 164 bytes:
+the historical 80-byte header followed by an 84-byte extension.
+This version-selected length applies wherever a block header is serialized in a P2P message, including <code>block</code>, <code>headers</code>, <code>cmpctblock</code>, and <code>merkleblock</code> messages.
+
+The historical header's fields are serialized as before:
+
+{| class="wikitable"
+! Byte offset
+! Bit length
+! Field
+! Serialization notes
+|-
+| 0 || 32 || Version
+| Bit 31 is set
+|-
+| 4 || 256 || Previous block
+|
+|-
+| 36 || 256 || Merkle root
+|
+|-
+| 68 || 32 || Timestamp
+|
+|-
+| 72 || 32 || Target (<code>nBits</code>)
+|
+|-
+| 76 || 32 || Nonce
+| First 32 bits; the historical nonce field
+|}
+
+The extension consists of the following fields.
+Integers are unsigned and little-endian;
+other fields are byte strings.
+Bits within the byte at offset 110 are numbered from least significant (0) to most significant (7).
+
+{| class="wikitable"
+! Byte offset
+! Bit length
+! Field
+! Serialization notes
+|-
+| 80 || 64 || Nonce
+| Last 64 bits
+|-
+| 88 || 128 || Extranonce
+|
+|-
+| 104 || 32 || Time offset
+|
+|-
+| 108 || 16 || Transaction count
+|
+|-
+| rowspan="4" | 110
+| 2 || Hashing-hardware profile selector
+| Bits 0-1
+|-
+| 1 || Time-offset enable bit
+| Bit 2
+|-
+| 3 || Reserved bits
+| Bits 3-5
+|-
+| 2 || Padding
+| Bits 6-7; MUST be zero
+|-
+| 111 || 8 || XOR-mask clear-bit count
+|
+|-
+| 112 || 128 || XOR key
+|
+|-
+| 128 || 32 || Height
+| The 31-bit height; the most significant bit is padding and MUST be zero
+|-
+| 132 || 256 || Merge-mining right-hand side
+|
+|}
+
+A header with nonzero padding is malformed.
+This is a parse error rather than a consensus rule, but implementations MAY treat it as they would an invalid block.
+
+=== Data following the header ===
+
+In a <code>headers</code> message, each header MUST still be followed by a terminating zero byte.
+In other messages, a transaction count accompanying a version 2 header, such as the CompactSize prefix of a block body or the 32-bit count in a <code>merkleblock</code> message, MUST equal the transaction count committed in the header.
+A message violating these requirements is malformed, but because its header may still be valid, implementations MUST NOT cache that header as invalid.
+
+=== Service bit ===
+
+This document defines the following service bit:
+
+<pre>
+NODE_BLAKE2B = 1 << 28
+</pre>
+
+<code>NODE_BLAKE2B</code> indicates that the node supports the version 2 block-header serialization.
+All peer-to-peer software supporting it MUST set this bit in the services field of its <code>version</code> message, including before activation, whether or not it validates blocks.
+Software that validates blocks SHOULD also include it in any announcement of its own address, such as in <code>addr</code> or <code>addrv2</code> messages; other software MAY do so.
+For example, a chain indexer needs to set the bit in its <code>version</code> message in order to be served version 2 headers and blocks.
+
+The bit is an unauthenticated advertisement.
+Implementations MUST remain robust if a peer advertises it incorrectly.
+
+<code>NODE_BLAKE2B</code> implies support for witness serialization:
+a node advertising it MUST serve witness data as if it also advertised <code>NODE_WITNESS</code>.
+This upgrade therefore deprecates <code>NODE_WITNESS</code>.
+Software that would require <code>NODE_WITNESS</code> of a peer SHOULD accept <code>NODE_BLAKE2B</code> in its place.
+Nodes MAY continue to advertise <code>NODE_WITNESS</code>.
+
+This upgrade also deprecates the temporary <code>NODE_REDUCED_DATA</code> service bit (<code>1 << 27</code>).
+Software implementing this specification need neither advertise it nor act on it.
+
+=== Peer selection ===
+
+This section is advisory and not normative.
+
+Software will generally prefer outbound peers that advertise <code>NODE_BLAKE2B</code>.
+As with <code>NODE_WITNESS</code>, the bit indicates only serialization support, but serves as a practical heuristic for peers that follow the valid chain and can provide post-activation blocks.
+The reference implementation keeps a bounded number of otherwise useful outbound peers that lack the bit as additional connections, without letting them displace its outbound target.
+When deciding whether its address manager provides enough bootstrap coverage, it counts only addresses advertising <code>NODE_BLAKE2B</code>, rather than treating an address manager populated only by obsolete peers as sufficient.
+Software querying address sources, such as DNS seeds, with service-bit filters will generally want to request <code>NODE_BLAKE2B</code> without <code>NODE_WITNESS</code>, so as not to exclude upgraded nodes that no longer advertise <code>NODE_WITNESS</code>.
+
+=== Header synchronization and block relay ===
+
+Nodes SHOULD NOT serve or announce version 2 blocks or headers to peers that do not advertise <code>NODE_BLAKE2B</code>.
+Nodes MAY also refuse to serve or announce any headers or blocks to such peers.
+When the upgrade is scheduled or active, a node SHOULD NOT send such peers a <code>getheaders</code> message unless its <code>hash_stop</code> identifies the final SHA256d block or an ancestor thereof.
+On mainnet, block 961,631 (<code>00000000000000000000807f9dc917442a67910426d79ebb2f8aa2149327ce8a</code>) takes the place of the final SHA256d block in this rule.
+
+== Rationale ==
+
+'''What is the purpose of the reserved bits and the bits that must be zero?'''
+
+Both allow a future protocol upgrade to assign meanings to them.
+Nodes implementing only the current rules ignore the reserved bits in the byte at offset 110, so a future upgrade can give them meanings without invalidating blocks for those nodes.
+Headers with any of the bits that must be zero set (bits 6-7 of the byte at offset 110 and the most significant bit of the height) remain explicitly malformed to such nodes, so these bits suit backward-incompatible upgrades similar to the BLAKE2b upgrade itself.
+For example, the most significant bit of the height could be used to extend it when the 31-bit range runs out around AD 42,838.
+
+'''Why a new service bit?'''
+
+Nodes that know only the historical 80-byte header format cannot parse the version 2 serialization.
+The service bit tells a node which peers can, so that it sends version 2 headers and blocks only to those peers, without needlessly disconnecting older nodes, which may still be useful for transaction relay, peer relay and historical blocks.
+It also helps upgraded nodes find peers able to serve them post-activation headers and blocks.
+Like all service bits, it is only a claim, which normal block validation must still verify.
+
+'''Why does NODE_BLAKE2B use a temporary-range service bit?'''
+
+Service bits 24 to 31 are reserved for temporary experiments and other temporary uses.
+<code>NODE_BLAKE2B</code> was originally intended merely to help upgraded nodes find each other during the upgrade, which is such a temporary use.
+Only later was it extended to negotiate the version 2 serialization, which nodes rely on indefinitely.
+
+'''Why does NODE_BLAKE2B supersede NODE_WITNESS?'''
+
+All software supporting the version 2 serialization also supports witness serialization, so a separate bit adds no information.
+<code>NODE_WITNESS</code> remains meaningful only for peers without <code>NODE_BLAKE2B</code>, such as obsolete nodes used for initial block download.
+Not requiring it from upgraded peers allows the bit to eventually be freed for other uses.
+
+'''Why not keep NODE_WITNESS for nodes that discard historical witness data?'''
+
+If <code>NODE_WITNESS</code> remained meaningful, such a node could have served historical blocks without their witnesses, signaling this by not advertising <code>NODE_WITNESS</code>.
+Since <code>NODE_BLAKE2B</code> requires serving witness data, this is not possible under this upgrade.
+This is no loss: blocks without witnesses are useful only to software that does not fully validate them, which is not something to encourage.
+For a fully validating node, a node lacking historical witness data is simply pruned, and advertises <code>NODE_NETWORK_LIMITED</code> or no block-serving service bit accordingly.
+
+'''Why may nodes continue to advertise NODE_WITNESS?'''
+
+Software that does not yet accept <code>NODE_BLAKE2B</code> in its place, including obsolete software, may still select peers by it, so advertising it keeps a node selectable by such software.
+As software adopts this upgrade, this matters less and less.
+
+'''Why deprecate NODE_REDUCED_DATA?'''
+
+Some nodes used <code>NODE_REDUCED_DATA</code>, a temporary service bit that was not defined by a BIP, to indicate enforcement of BIP 110's rules.
+Validating nodes on the upgraded chain already enforce those rules where applicable, so a separate signal is no longer needed.
+<code>NODE_BLAKE2B</code> does not itself indicate whether a peer validates blocks.
+
+'''Why limit what is served to peers without NODE_BLAKE2B?'''
+
+A peer without <code>NODE_BLAKE2B</code> cannot parse version 2 headers or blocks.
+Having not upgraded, it may also follow an invalid altcoin chain, which diverged from mainnet at height 961,632.
+Nodes have no obligation to serve such peers anything.
+Such a peer may nonetheless be willing to serve historical Bitcoin blocks, so a node may still use it for initial block download.
+If a node requests headers from such a peer, it should use a <code>hash_stop</code> identifying the block specified above or an ancestor thereof to limit the response.
+If the response reaches that block, the peer should stop there, and the response should not include headers from the altcoin chain.
+
+== Backward compatibility ==
+
+Peers that understand only the historical 80-byte header cannot parse the version 2 form.
+<code>NODE_BLAKE2B</code> helps implementations select compatible peers, but it is an unauthenticated advertisement and does not guarantee a peer's behavior.
+
+== Test vectors ==
+
+The first [[bip-blake2b-pow.mediawiki#Test_vectors|test vector of BIP FIXME-BLAKE2B]] serializes as follows:
+
+{| class="wikitable"
+! Byte offset
+! Field
+! Serialized bytes
+! Value
+|-
+| 0 || Version || <code>000000a0</code> || <code>0xa0000000</code>
+|-
+| 4 || Previous block || <code>1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100</code> ||
+|-
+| 36 || Merkle root || <code>00112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0</code> ||
+|-
+| 68 || Timestamp || <code>a8913577</code> || 1,999,999,400
+|-
+| 72 || Target (<code>nBits</code>) || <code>ffff001d</code> || <code>0x1d00ffff</code>
+|-
+| 76 || Nonce (first 32 bits) || <code>0df0ad0b</code> ||
+|-
+| 80 || Nonce (last 64 bits) || <code>44332211efcdab89</code> ||
+|-
+| 88 || Extranonce || <code>ffeeddccbbaa99887766554433221100</code> ||
+|-
+| 104 || Time offset || <code>58020000</code> || 600
+|-
+| 108 || Transaction count || <code>0300</code> || 3
+|-
+| 110 || Flags || <code>1c</code> || Profile 0, time offset enabled, reserved bits 3-4 set
+|-
+| 111 || XOR-mask clear-bit count || <code>00</code> || 0
+|-
+| 112 || XOR key || <code>00000000000000000000000000000000</code> ||
+|-
+| 128 || Height || <code>40d10c00</code> || 840,000
+|-
+| 132 || Merge-mining right-hand side || <code>8967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab</code> ||
+|}
+
+A <code>headers</code> message carrying only this header consists of <code>01</code>, the 164 bytes above, and a terminating <code>00</code>.
+
+The other vectors serialize as follows:
+
+<pre>
+profile_1_time_offset_nonzero_key =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211efcdab89ffeeddccbbaa998877665544332211005802000001001d00efcdab8967452301efcdab896745230141d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+
+profile_2_time_offset_clear_bits_7 =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0bddccbbaaefcdab89ffeeddccbbaa998877665544332211005802000003001e071032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+
+profile_3_time_offset_clear_bits_8 =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f0a8913577ffff001d0df0ad0b44332211040302010000000000000000ffffffffffffffff5802000003001f081032547698badcfe1032547698badcfe40d10c008967452301efcdab8967452301efcdab8967452301efcdab8967452301efcdab
+
+profile_0_time_offset_disabled_clear_bits_255 =
+000000a01f1e1d1c1b1a191817161514131211100f0e0d0c0b0a0908070605040302010000112233445566778899aabbccddeeff00102030405060708090a0b0c0d0e0f000943577ffff001dffffffff44332211efcdab89ffeeddccbbaa9988776655443322110088776655030018ff2222222222222222111111111111111140d10c000000000000000000000000000000000000000000000000000000000000000000
+</pre>
+
+Setting bit 6 or bit 7 of the byte at offset 110, or the most significant bit of the height, makes the header malformed.
+Changing the reserved bits 3-5 does not.
+
+== Reference implementation ==
+
+The reference implementation is Bitcoin Knots tag [https://github.com/bitcoinknots/bitcoin/commit/a7c4617524c334f542484bfef3919b9f12573840 v29.4.3.knots20260508], principally <code>src/primitives/block.h</code>, <code>src/protocol.h</code>, <code>src/validation.cpp</code>, <code>src/net_processing.cpp</code>, <code>src/net.cpp</code>, and <code>src/kernel/chainparams.cpp</code>.
+[https://github.com/bitcoinknots/bitcoin/pull/517 Bitcoin Knots pull request #517] proposes implementing the recommendation to accept <code>NODE_BLAKE2B</code> in place of <code>NODE_WITNESS</code>.
