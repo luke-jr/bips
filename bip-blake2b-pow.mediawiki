@@ -11,14 +11,9 @@
 
 == Abstract ==
 
-This document specifies an upgrade that changes Bitcoin's proof-of-work algorithm from SHA256d to BLAKE2b.
+This document specifies switchover from SHA-256-double to BLAKE2b algorithm used in the proof-of-work mechanism of Bitcoin. Its goal is to reinforce decentralization of the system by breaking off reliance on SHA-256-double algorithm hashpower which is controlled by an adversary.
 
-The new proof of work uses a new block header format, which also incorporates fixes for several long-standing protocol limitations that could not be corrected without changing the block header.
-It commits to the block height and transaction count, provides additional mining nonce space, permits timestamp rolling without revealing the real block time to hashing hardware, and provides a dedicated merge-mining commitment.
-
-== Copyright ==
-
-This document is licensed under the 2-clause BSD license.
+Along with the new algorithm BLAKE2b in the proof-of-work mechanism, the document specifies the block header new format, which incorporates both extensions and fixes.
 
 == Motivation ==
 
