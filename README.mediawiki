@@ -547,13 +547,13 @@ users (see also: [https://en.bitcoin.it/wiki/Economic_majority economic majority
 | Fabian Jahr
 | Specification
 | Deployed
-|- style="background-color: #cfffcf"
+|- style="background-color: #ffffcf"
 | [[bip-0095.md|95]]
 | Applications
 | Testnet 5
 | Pol Espinasa, Fabian Jahr
 | Specification
-| Deployed
+| Complete
 |-
 | [[bip-0098.mediawiki|98]]
 | Consensus (soft fork)
