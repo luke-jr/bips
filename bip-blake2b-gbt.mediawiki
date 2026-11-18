@@ -7,6 +7,7 @@
   Type: Specification
   Assigned: ?
   License: BSD-2-Clause
+  Discussion: https://groups.google.com/g/bitcoin-devel/c/sb8dMKMQFVI
   Requires: FIXME-BLAKE2B
 </pre>
 
