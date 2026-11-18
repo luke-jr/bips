@@ -7,6 +7,7 @@
   Type: Specification
   Assigned: ?
   License: BSD-2-Clause
+  Discussion: https://groups.google.com/g/bitcoin-devel/c/cArFwXT4m2Q
 </pre>
 
 == Abstract ==
@@ -1090,7 +1091,7 @@ Beginning at <code>activation_height</code>:
 * headers with version bit 31 clear are invalid.
 
 The [[bip-blake2b-p2p.mediawiki|peer-services specification]] defines the version-selected header serialization and service-bit advertisement.
-The separate [[bip-blake2b-mining-interface.mediawiki|mining-interface specification]] defines the getblocktemplate changes.
+The [[bip-blake2b-gbt.mediawiki|BLAKE2b getblocktemplate BIP]] defines a mining interface.
 Block-file layout, indexing, and other local implementation details are left to implementations.
 
 == Test vectors ==
@@ -1226,8 +1227,6 @@ mm_rhs             = 00000000000000000000000000000000000000000000000000000000000
 block_hash =
 c31b24420d67f86e524f980a24a18e88f36c821046d5288251b5d88998c69f86
 </pre>
-
-For reserved-bit validation, setting bit 6 or bit 7 of the packed byte in the first vector produces an invalid header.
 
 == Reference implementation ==
 
