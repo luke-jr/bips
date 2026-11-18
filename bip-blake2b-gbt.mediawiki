@@ -1,0 +1,132 @@
+<pre>
+  BIP: ?
+  Layer: API/RPC
+  Title: getblocktemplate Updates for BLAKE2b Proof of Work
+  Authors: Luke Dashjr <luke+bip@dashjr.org>
+  Status: Draft
+  Type: Specification
+  Assigned: ?
+  License: BSD-2-Clause
+  Requires: FIXME-BLAKE2B
+</pre>
+
+== Abstract ==
+
+This document specifies getblocktemplate changes for the [[bip-blake2b-pow.mediawiki|BLAKE2b upgrade]].
+
+== Copyright ==
+
+This document is licensed under the 2-clause BSD license.
+
+== Motivation ==
+
+The BLAKE2b upgrade changes the block header and the proof-of-work algorithm.
+Miners using getblocktemplate need the additional template data to construct version 2 block headers.
+
+== Specification ==
+
+=== getblocktemplate ===
+
+A client supporting this BIP SHOULD include the rule string <code>blake2b</code> in the <code>rules</code> list of its getblocktemplate request, both before and after activation.
+A template server MAY reject a request that does not include <code>blake2b</code>.
+
+A template for a block at or after the activation height is a ''BLAKE2b template''.
+The <code>rules</code> list of a BLAKE2b template MUST include the rule string:
+
+<pre>
+!blake2b
+</pre>
+
+The rule strings <code>blake2b</code> and <code>!blake2b</code> imply every rule string of a deployment active before the activation height, except <code>reduced_data</code>.
+A template server SHOULD NOT reject a request that includes <code>blake2b</code> for lacking a rule string it implies, and a BLAKE2b template MAY omit any rule string that <code>!blake2b</code> implies.
+
+The template's <code>version</code> field MUST contain the complete 32-bit version, including the header-version high bit.
+
+At the activation height, the template's <code>coinbaseaux</code> object MUST include:
+
+<pre>
+blake2b_headline
+</pre>
+
+whose value is the exact activation headline bytes encoded as hex.
+
+=== Version 2 header construction ===
+
+The existing <code>height</code> field supplies the committed block height.
+The client derives the committed transaction count from the final block it constructs, including the generation transaction;
+no separate template field supplies this count.
+
+The <code>curtime</code> and <code>mintime</code> fields refer to the block time used by the consensus rules, rather than the serialized timestamp before adding any enabled time offset.
+
+When applicable, the one-time activation target adjustment is already included in the <code>bits</code> field.
+It is also included in any BIP 23 <code>target</code> or <code>fulltarget</code> field that specifies the network target.
+Clients MUST NOT apply that adjustment again.
+
+The client selects the nonce, extranonce, hashing-hardware profile, time offset and its enable bit, merge-mining right-hand side, XOR key and XOR-mask clear-bit count under the BLAKE2b proof-of-work rules.
+
+Where BIP 23 submission abbreviations and merkle-only shares refer to the 80-byte block header, a block using the version 2 header uses the complete version 2 header instead.
+
+=== Deprecated fields ===
+
+BIP 23 provided the <code>noncerange</code> field only for parity with getwork, and never required clients or servers to support it.
+This BIP formally deprecates it for BLAKE2b templates:
+a server SHOULD omit it;
+if present, it MUST be <code>00000000ffffffff</code>, the full range of the first 32 bits of the nonce.
+Clients MAY ignore it.
+
+This BIP also deprecates the BIP 23 <code>nonces</code> request key.
+A client that includes <code>blake2b</code> in its supported rules SHOULD NOT send it.
+
+== Rationale ==
+
+'''Why prefix the blake2b rule with "!"?'''
+
+No client unaware of this BIP can mine a BLAKE2b template.
+The <code>!</code> prefix, under BIP 8, makes such a client refuse the template with a clear error, rather than wasting work on blocks that can never be valid.
+
+'''Why may servers require the blake2b rule?'''
+
+The <code>!blake2b</code> rule in the template already tells a client implementing BIP 8 not to use the template unless it supports this BIP, so a server need not require the rule in requests.
+Unlike segwit, for which BIP 145 lets a server serve clients lacking the rule a template without witness data, no template after activation can be mined without BLAKE2b, so knowing in advance whether a client supports this BIP gives the server no choice of template to make.
+A server typically already requires some rule in requests, such as <code>segwit</code>, to be sure the client handles rules prefixed with <code>!</code>.
+Since <code>blake2b</code> implies the earlier rules, requiring it alone is simpler than accepting either it or <code>segwit</code>.
+
+'''Why does the blake2b rule imply earlier rules?'''
+
+A client supporting this BIP necessarily postdates the earlier deployments, and could not mine a valid block after activation without handling them, so listing them as well conveys nothing.
+The <code>reduced_data</code> rule is excluded because it is temporary, so its presence still tells the client whether it applies to the template's block.
+
+'''Why deprecate noncerange rather than extend it to the whole nonce?'''
+
+BIP 23 included <code>noncerange</code> only so that getblocktemplate would be a complete superset of getwork, under which a pool could divide the 32-bit historical nonce among clients working on the same work.
+getwork dates from CPU and GPU mining, when searching 2<sup>32</sup> nonces could take several minutes, longer than a job remained current.
+The field cannot describe the 96-bit nonce of the version 2 header.
+Modern hardware searches 2<sup>32</sup> nonces in a fraction of a second, so it always needs more work than the historical nonce can provide, and dividing that nonce among clients no longer makes sense.
+The 96-bit nonce, however, is large enough that dividing it would make sense:
+even if a server fixed its first 32 bits, 2<sup>64</sup> nonces would remain, enough for about 307 Ph/s for a full minute.
+It is nonetheless not divided, because the nonce belongs to the mining hardware, which divides it internally among its chips and cores, and a server constraining it would work against that division.
+A server may instead divide the 128-bit extranonce in the version 2 header among clients, as specified in the [[bip-blake2b-gbt-pooled.mediawiki|BLAKE2b pooled-mining BIP]].
+The full range remains permitted so that existing servers, which always report it, need not change.
+
+'''Why deprecate nonces?'''
+
+The <code>nonces</code> key requests a nonce range of a given size, which only <code>noncerange</code> could provide.
+The whole 96-bit nonce of the version 2 header is always available to the client, so only counts above 2<sup>96</sup> would remain meaningful.
+Although JSON places no limit on the size of a Number, many JSON implementations cannot represent integers that large exactly, and some cannot parse JSON containing them at all.
+The [[bip-blake2b-gbt-pooled.mediawiki|BLAKE2b pooled-mining BIP]] instead divides the 128-bit extranonce, with a new request key giving the number of extranonce bytes the client needs.
+
+== Backward compatibility ==
+
+Clients unaware of this BIP cannot mine BLAKE2b templates.
+Those implementing BIP 8 will not attempt to use them, because of the <code>!blake2b</code> rule.
+
+== Reference implementation ==
+
+The reference implementation is Bitcoin Knots tag [https://github.com/bitcoinknots/bitcoin/commit/8c85b1585dac23f964e2dd32045624de7f02aa58 v29.4.1.knots20260508], principally <code>src/rpc/mining.cpp</code>.
+
+Bitcoin Knots pull request [https://github.com/bitcoinknots/bitcoin/pull/518 #518] proposes dropping <code>noncerange</code> from getblocktemplate.
+Pull request [https://github.com/bitcoinknots/bitcoin/pull/519 #519] proposes accepting <code>blake2b</code> in a request without <code>segwit</code>.
+
+Exception:
+the <code>blake2b_headline</code> field in <code>coinbaseaux</code> is implemented in [https://github.com/bitcoinknots/bitcoin/commit/dc82be77dd741dfa63e1f816367b15364d55b051 v29.4.1.knots20260508rc4], and was removed before the final release.
+Released versions omit it from getblocktemplate, as the activation block it applies to has already been mined.
