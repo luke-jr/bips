@@ -1,0 +1,376 @@
+<pre>
+  BIP: ?
+  Layer: API/RPC
+  Title: Pooled Mining with getblocktemplate for BLAKE2b
+  Authors: Luke Dashjr <luke+bip@dashjr.org>
+  Status: Draft
+  Type: Specification
+  Assigned: ?
+  License: BSD-2-Clause
+  Requires: FIXME-BLAKE2B, FIXME-BLAKE2B-GBT
+</pre>
+
+== Abstract ==
+
+This document specifies optional pooled-mining extensions to the [[bip-blake2b-gbt.mediawiki|getblocktemplate updates]] for the [[bip-blake2b-pow.mediawiki|BLAKE2b upgrade]].
+
+== Copyright ==
+
+This document is licensed under the 2-clause BSD license.
+
+== Motivation ==
+
+The [[bip-blake2b-gbt.mediawiki|BLAKE2b getblocktemplate BIP]] defines how a miner constructs blocks with BLAKE2b proof of work.
+This specification adds optional support for pools to divide work among clients and withhold XOR keys.
+
+== Specification ==
+
+This BIP specifies optional getblocktemplate extensions for pools dividing work among clients mining BLAKE2b templates, as defined by the [[bip-blake2b-gbt.mediawiki|BLAKE2b getblocktemplate BIP]].
+A client that implements it MAY include the rule string <code>pool</code> in the <code>rules</code> list of its getblocktemplate request.
+A template that includes any of the template fields defined in this BIP MUST include the rule string <code>!pool</code> in its <code>rules</code> list.
+A BLAKE2b template MUST also include <code>!pool</code> if it restricts the client with any of these optional features of BIP 22 or BIP 23:
+* the BIP 22 <code>workid</code> or <code>coinbasetxn</code> field;
+* a transaction with the BIP 22 <code>required</code> key set to true;
+* the BIP 23 <code>expires</code>, <code>maxtime</code> or <code>maxtimeoff</code> field;
+* a BIP 23 <code>mutable</code> list that lacks any of <code>time</code>, <code>transactions</code> (or <code>transactions/add</code>) and <code>prevblock</code>.
+A client that uses a template including <code>!pool</code> MUST either support every field and restriction above that the template includes, or refuse the template.
+
+=== Extranonce division ===
+
+In this BIP, the extranonce is the 128-bit extranonce field of the version 2 header, not extra data in the generation transaction.
+A server can divide it among clients working on the same template, so that they do not duplicate work.
+
+{| class="wikitable"
+!colspan=3| template request
+|-
+! Key !! Type !! Description
+|-
+| extranoncesize || Number || minimum number of extranonce bytes, from 0 through 16, that the client needs left free for it to choose after any <code>extranonceprefix</code>; if not provided, the server SHOULD assume 12
+|}
+
+{| class="wikitable"
+!colspan=3| template
+|-
+! Key !! Type !! Description
+|-
+| extranonceprefix || String || bytes, encoded as hex, with which the extranonce MUST begin; from 0 through 16 bytes
+|}
+
+When <code>extranonceprefix</code> is present, the client selects only the remaining bytes of the extranonce.
+The prefix SHOULD NOT be longer than 16 bytes minus the client's <code>extranoncesize</code>;
+if the server insists on a longer prefix, the client decides whether to use the template.
+A server serving several clients from the same template can give each a distinct prefix, so that their work does not overlap.
+These keys give a server another way to make each client's work unique, alongside the BIP 23 <code>coinbase/append</code> mutation, which remains available, for example for a client that needs all 16 bytes of the extranonce.
+
+=== Withholding the XOR key ===
+
+A pool using getblocktemplate can withhold the XOR key from its clients, so that they cannot tell whether a share is also a valid block.
+To do so, the template server MUST include the following fields:
+
+{| class="wikitable"
+!colspan=3| template
+|-
+! Key !! Type !! Description
+|-
+| xorkeyhash || String || the XOR-key hash, as defined by the BLAKE2b proof-of-work specification, of an XOR key chosen by the server, encoded as hex
+|-
+| xorclearbits || Number || the XOR-mask clear-bit count, from 0 through 255
+|}
+
+It MUST include both fields or neither, and when it includes them, it MUST also include the BIP 22 <code>workid</code> field, with which the server can look up the XOR key.
+
+When these fields are present, the client MUST use them in header commitment 1, unless the server permits the <code>xorkey</code> mutation;
+a client that cannot use them MUST NOT use the template otherwise.
+As BIP 22 already requires, the client submits the block with that <code>workid</code>.
+The client cannot know the XOR key, so in block proposals and submissions it writes the XOR key field as a single question mark (<code>?</code>) in place of its 32 hexadecimal digits.
+When decoding the block data, the server interprets this question mark as the 16-byte XOR key it looks up with the <code>workid</code>.
+The server MUST NOT interpret a question mark in any other position as the XOR key.
+If the server does not permit the <code>xorkey</code> mutation and the client instead writes hexadecimal digits in the XOR key field, whether to accept the submission is at the server's discretion.
+A server that accepts such a submission when the digits match the withheld XOR key MUST NOT reveal whether they match unless the share meets its target, such as through its rejection reason, since otherwise a client could test guesses of the XOR key without doing any work.
+
+Without the XOR key, the client cannot compute the XOR mask.
+It can check only the bits that the clear-bit count leaves unmasked, so the server chooses the clear-bit count to suit its share target.
+
+For the same reason, if the server includes the BIP 22 <code>target</code> field or the BIP 23 <code>fulltarget</code> field, every bit of each after the first <code>xorclearbits</code> bits, counted from the most significant bit, MUST be one.
+Whether a share meets either target then depends only on the unmasked bits, so the client can check it as usual.
+
+==== XOR key mutation ====
+
+{| class="wikitable"
+!colspan=2| mutations
+|-
+! Value !! Significance
+|-
+| xorkey
+| choose an XOR key and XOR-mask clear-bit count other than those supplied by the server
+|}
+
+A client that chooses to exercise the <code>xorkey</code> mutation picks its own XOR key, which MAY be zero, and clear-bit count, and submits that key in hexadecimal in the XOR key field as usual.
+
+=== Per-chain submission results ===
+
+BIP 22 permits a submission response to be an Object with a key for each chain the share was submitted to.
+In place of the BIP 22 null or String result for a chain, its value MAY be an Object with the following keys:
+
+{| class="wikitable"
+!colspan=3| per-chain submission result
+|-
+! Key !! Type !! Description
+|-
+| reject-reason || String || the BIP 22 rejection reason for the chain; omitted or null if the share was accepted
+|-
+| xorkey || String || the XOR key the chain's work used, encoded as hex, if the server [[#Revealing the XOR key|reveals it]]
+|}
+
+==== Chain names ====
+
+BIP 22 does not define the names of chains.
+The key for Bitcoin is <code>"main"</code>, and for testnet4 is <code>"testnet4"</code>.
+Other chains MUST NOT use these names.
+
+=== Revealing the XOR key ===
+
+A server MAY reveal a withheld XOR key once it no longer needs to withhold it, such as when a share is a valid block.
+Revealing the XOR key lets the client broadcast any share that is a valid block, and audit that the server did not itself withhold blocks found by the client.
+
+In response to a block submission, the server MAY reveal the XOR key by including the <code>xorkey</code> key in a [[#Per-chain submission results|per-chain submission result]] Object for each chain whose XOR key it reveals.
+
+When a submission response reveals the XOR key, the client SHOULD check whether the share meets the target for a valid block with that key, and if so, also submit the block to its own node(s).
+
+When a BIP 23 block proposal response replaces the <code>workid</code>, it MAY also include an <code>xorkey</code> key, revealing the XOR key for the replaced <code>workid</code>.
+
+A client MAY explicitly request the XOR key for a <code>workid</code>, such as after the job has expired, with a getblocktemplate request containing the following keys:
+
+{| class="wikitable"
+!colspan=3| XOR key request
+|-
+! Key !! Type !! Description
+|-
+| mode || String || MUST be "xorkey"
+|-
+| workid || String || the <code>workid</code> whose XOR key is requested
+|-
+| longpoll || Boolean || if true, the server SHOULD delay its response until it is willing to reveal the XOR key, rather than respond with the <code>withheld</code> rejection reason
+|}
+
+The server responds with an Object containing exactly one of the following keys:
+
+{| class="wikitable"
+!colspan=3| XOR key response
+|-
+! Key !! Type !! Description
+|-
+| xorkey || String || the XOR key for the <code>workid</code>, encoded as hex
+|-
+| reject-reason || String || the reason the server does not reveal the XOR key
+|}
+
+This BIP defines the following rejection reasons for XOR key requests:
+
+{| class="wikitable"
+!colspan=2| XOR key rejection reasons
+|-
+! Reason !! Meaning
+|-
+| unknown-work || the server does not recognise the <code>workid</code>, as for BIP 22
+|-
+| withheld || the server still withholds the XOR key, such as while it may still use it for current jobs, and may reveal it later
+|-
+| declined || the server will never reveal the XOR key
+|}
+
+Servers MAY use other rejection reasons;
+clients SHOULD treat an unrecognised reason as <code>declined</code>.
+
+When asked to long poll, the server SHOULD NOT respond with <code>withheld</code>, but MAY respond with any other rejection reason, such as <code>declined</code>.
+As with BIP 22 long polling, the client should expect the response to take a long time.
+
+== Rationale ==
+
+'''Why signal pooled mining with a single rule?'''
+
+Clients already check the <code>rules</code> list for rules prefixed with <code>!</code>, so the <code>!pool</code> rule lets a client that does not implement pooled mining avoid such templates without checking for each pooled-mining field.
+Pooled mining with getblocktemplate is rarely used, so clients should not bear the burden of checking for its fields.
+A single rule suffices because a client implementing pooled mining either implements the whole specification, or checks for the specific fields it does not implement.
+The rule also covers the optional features of BIP 22 and BIP 23 that restrict what the client may do.
+A client need not understand optional features, but a client ignoring any of these produces shares the server rejects.
+Other optional features are left out because a client may safely ignore them:
+<code>coinbaseaux</code> is only recommended, the long-polling fields affect only long polling, the <code>sigoplimit</code>, <code>sizelimit</code> and BIP 145 <code>weightlimit</code> limits are widely used outside pooled mining and need not match any particular consensus limit, <code>target</code> and <code>fulltarget</code> affect only which shares are submitted, <code>mintime</code> states only the consensus minimum that <code>curtime</code> already satisfies, the submission abbreviations, block proposals and <code>serverlist</code> are used only at the client's choice, and <code>noncerange</code> is restricted to the full range in BLAKE2b templates.
+Requiring the rule breaks no existing server, since every BLAKE2b template is new.
+
+'''Why let a pool supply only the XOR-key hash?'''
+
+Supplying only the XOR-key hash lets a pool using getblocktemplate benefit from the block-withholding protection of the XOR key, as other pooled-mining protocols can.
+The XOR key has no purpose other than this protection, so there is no reason for a template to supply the key itself.
+
+'''Why mark the withheld XOR key with a single placeholder character?'''
+
+A single non-hexadecimal placeholder for the withheld XOR key follows the precedent of the BIP 23 <code>submit/hash</code> mutation, which places non-hexadecimal characters in block data.
+The server decodes the block data anyway, so a single character suffices, which matters when a submission abbreviated with <code>submit/truncate</code> contains only the block header.
+
+'''Why allow clients to choose their own XOR key?'''
+
+A client may need to control the XOR key itself, such as when it is a pool or proxy that withholds its own XOR key from its own miners.
+The <code>xorkey</code> mutation lets a pool that withholds the XOR key still accept work from such clients, on whatever terms it chooses for presumed-unprotected work.
+
+'''Why must the server set its targets to suit the unmasked bits?'''
+
+The BIP 23 <code>fulltarget</code> is the target below which the server wants the full block.
+It is usually the network target, so that the server can broadcast blocks, but it need not be:
+a server merge-mining other chains, for instance, may set it to the easiest of their targets.
+A server withholding the XOR key likewise cannot use the network target, since the client cannot compare a share against it, and instead chooses a target the client can check.
+The BIP 22 <code>target</code> for shares is subject to the same constraint.
+Withholding the XOR key is the server's choice, so the server, rather than every client, takes on the resulting constraint, and clients check <code>target</code> and <code>fulltarget</code> the same way whether or not the XOR key is withheld.
+
+'''Why are revealed XOR keys returned per chain?'''
+
+With merged mining, each chain's work may use its own XOR key, so a submission response reveals keys within the existing BIP 22 per-chain result Object rather than replacing it.
+BIP 22 already defines an Object submission response as one with a result per chain, so even a single-chain response has no other way to return more than one value.
+
+'''Why are the chains named "main" and "testnet4"?'''
+
+BIP 22 never defined the names of chains.
+The names <code>"main"</code> and <code>"testnet4"</code> are those Bitcoin Knots uses for its <code>-chain</code> option and in the <code>chain</code> field of its <code>getmininginfo</code> and <code>getblockchaininfo</code> results, so mining software may already know them.
+Other conventions do not name each test network distinctly, or are not names at all.
+The Bech32 human-readable parts of BIP 173 use <code>tb</code> for every test network, and SLIP-44 gives every test network the same coin type.
+BIP 70 and BIP 136 distinguish only mainnet, a single "test" network, and, in BIP 136, regtest.
+BIP 122 identifies a chain by a block hash, which for Bitcoin is that of the genesis block, shared by chains that split from it.
+
+'''Why can XOR key requests long poll?'''
+
+A server may continue to use an XOR key after the job a client was given is replaced, such as for other jobs that expire later, including other clients' jobs, so the client cannot tell when the XOR key becomes revealable.
+Long polling lets the client learn the XOR key as soon as the server is willing to reveal it, without repeatedly asking.
+
+'''Why divide the extranonce rather than the nonce?'''
+
+The BIP 23 <code>nonces</code> and <code>noncerange</code> keys divide the nonce, which in the version 2 header belongs to the mining hardware, as FIXME-BLAKE2B-GBT explains, so they cannot divide work between clients.
+Since the whole 96-bit nonce is always available to the client, a <code>nonces</code> count would only be meaningful above 2<sup>96</sup>.
+Although JSON places no limit on the size of a Number, many JSON implementations cannot represent integers that large exactly, and some cannot parse JSON containing them at all, while a count of extranonce bytes is small and matches the whole-byte prefix it constrains.
+The default of 12 bytes leaves the server 4 bytes to distinguish clients, the same layout the DATUM protocol uses, which reserves the first 4 bytes of the extranonce.
+
+== Backward compatibility ==
+
+This BIP affects only BLAKE2b templates.
+A BLAKE2b template using any of the BIP 22 or BIP 23 features listed in the [[#Specification|specification]] includes the <code>!pool</code> rule, even though those features predate this BIP.
+This breaks no existing server, since every BLAKE2b template is new, but a server that uses those features in its existing templates must add the rule to its BLAKE2b templates.
+A client that supports those features but not this BIP will not use such templates, because of the <code>!pool</code> rule.
+
+== Test vectors ==
+
+These vectors illustrate the fields and decisions defined by this BIP; they are not complete block or template vectors.
+
+'''Withheld XOR-key placeholder'''
+
+In the version 2 header serialization, the XOR key occupies bytes 112 through 127.
+For a submission with <code>workid</code> <code>job-1</code>, if the server's corresponding XOR key is <code>000102030405060708090a0b0c0d0e0f</code>, the client represents the XOR key field in the block data as <code>?</code>, and the server substitutes those 16 bytes before decoding.
+The same substitution applies to a header-only submission, including one using <code>submit/truncate</code>.
+A question mark in any other field position is not a request for this substitution.
+
+'''Target comparisons with a withheld XOR key'''
+
+With <code>xorclearbits</code> set to 16, a client can check the first 16 bits of the proof-of-work digest.
+Both <code>target</code> and <code>fulltarget</code>, when present, MUST have all remaining 240 bits set to one.
+For example, the target <code>1234ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</code> permits an ordinary comparison using only those first 16 bits:
+
+{| class="wikitable"
+! Candidate proof-of-work digest !! Client's visible prefix !! Result
+|-
+| <code>1233000000000000000000000000000000000000000000000000000000000000</code> || <code>1233</code> || Meets target
+|-
+| <code>1234000000000000000000000000000000000000000000000000000000000000</code> || <code>1234</code> || Meets target
+|-
+| <code>1235000000000000000000000000000000000000000000000000000000000000</code> || <code>1235</code> || Does not meet target
+|}
+
+The target <code>1234000000000000000000000000000000000000000000000000000000000000</code> does not satisfy the required trailing-one rule, so a client cannot compare it normally using only the visible prefix.
+The same vectors apply independently to <code>target</code> and <code>fulltarget</code>.
+
+'''Extranonce division'''
+
+{| class="wikitable"
+! Request <code>extranoncesize</code> !! Template <code>extranonceprefix</code> !! Result
+|-
+| 12 || <code>01020304</code> || Valid; the client chooses the remaining 12 bytes
+|-
+| 12 || <code>0102030405</code> || The prefix exceeds the recommended maximum; the client decides whether to use the template
+|-
+| omitted || <code>01020304</code> || The server SHOULD assume <code>extranoncesize</code> is 12, leaving 12 bytes for the client
+|-
+| 0 || <code>000102030405060708090a0b0c0d0e0f</code> || Valid; the prefix occupies all 16 bytes
+|}
+
+The BIP 23 <code>coinbase/append</code> mutation remains an alternative way to make work unique and is not constrained by these extranonce examples.
+
+'''The <code>!pool</code> rule'''
+
+{| class="wikitable"
+! BLAKE2b template feature !! <code>!pool</code> required by this BIP?
+|-
+| Any template field defined by this BIP, such as <code>extranonceprefix</code> or <code>xorkeyhash</code> || Yes
+|-
+| BIP 22 <code>workid</code> or <code>coinbasetxn</code> || Yes
+|-
+| BIP 22 transaction with <code>required</code> set to true || Yes
+|-
+| BIP 23 <code>expires</code>, <code>maxtime</code> or <code>maxtimeoff</code> || Yes
+|-
+| BIP 23 <code>mutable</code> list lacking any of <code>time</code>, <code>transactions</code> (or <code>transactions/add</code>) and <code>prevblock</code> || Yes
+|-
+| None of the features or restrictions above || No
+|}
+
+'''Per-chain submission results'''
+
+A single-chain response can return more than one value in its per-chain result Object:
+
+<pre>
+{
+  "main": {
+    "xorkey": "000102030405060708090a0b0c0d0e0f"
+  }
+}
+</pre>
+
+A merged-mining response can return a result for each chain:
+
+<pre>
+{
+  "main": {
+    "xorkey": "000102030405060708090a0b0c0d0e0f"
+  },
+  "testnet4": {
+    "reject-reason": "invalid"
+  }
+}
+</pre>
+
+'''XOR key requests and responses'''
+
+A request for an XOR key may be made immediately:
+
+<pre>
+{
+  "mode": "xorkey",
+  "workid": "job-1"
+}
+</pre>
+
+It may instead ask the server to long poll:
+
+<pre>
+{
+  "mode": "xorkey",
+  "workid": "job-1",
+  "longpoll": true
+}
+</pre>
+
+The server's response contains exactly one of <code>xorkey</code> or <code>reject-reason</code>.
+Possible responses, each shown separately, are:
+
+<pre>
+{"xorkey": "000102030405060708090a0b0c0d0e0f"}
+{"reject-reason": "unknown-work"}
+{"reject-reason": "withheld"}
+{"reject-reason": "declined"}
+</pre>
